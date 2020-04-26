@@ -1,0 +1,62 @@
+{
+    "uiimports": {
+        "View": "app.ui.View",
+        "Dialog": "app.ui.Dialog",
+        "CellView": "app.ui.CellView",
+        "Button": "app.ui.Button",
+        "ImageView": "app.ui.ImageView",
+        "CheckBox": "app.ui.CheckBox",
+        "List": "app.ui.List",
+        "Tab": "app.ui.Tab",
+        "AniView": "app.ui.AniView",
+        "SpineView": "app.ui.SpineView",
+        "ViewStack": "app.ui.ViewStack",
+        "ComboBox": "app.ui.ComboBox",
+        "HBox": "app.ui.HBox",
+        "VBox": "app.ui.VBox"
+    },
+    "components": {
+        "Button": "app.ui.Button",
+        "Image": "app.ui.ImageView",
+        "CheckBox": "app.ui.CheckBox",
+        "List": "app.ui.List",
+        "Tab": "app.ui.Tab",
+        "AniView": "app.ui.AniView",
+        "SpineView": "app.ui.SpineView",
+        "ViewStack": "app.ui.ViewStack",
+        "HTMLDivElement": "Laya.HTMLDivElement",
+        "ComboBox": "app.ui.ComboBox",
+        "HBox": "app.ui.HBox",
+        "VBox": "app.ui.VBox"
+    },
+    "skinLabels": {
+        "Button": [
+            "image",
+            "skin"
+        ],
+        "ImageView": [
+            "skin"
+        ]
+    },
+    "md5Excludes": [
+        "font.d/ttf.ttf"
+    ],
+    "gitIgnores": [
+        "sheets",
+        "atlas"
+    ],
+    "transformExcludes": [
+        "sheets/wgt1.png",
+        "sheets/common.png"
+    ],
+    "modelResPathes": [
+        "fight.d"
+    ],
+    "metaResources": [
+        "userAgreement.txt",
+        "views.json",
+        "data.json"
+    ],
+    "beforeManifestFile": []
+
+}

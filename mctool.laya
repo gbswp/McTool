@@ -1,0 +1,33 @@
+{
+    "proName": "template",
+    "version": "1.8.6beta",
+    "proType": 1,
+    "modules": [
+        {
+            "name": "core"
+        },
+        {
+            "name": "webgl"
+        },
+        {
+            "name": "ani"
+        },
+        {
+            "name": "html"
+        },
+        {
+            "name": "ui"
+        },
+        {
+            "name": "promise",
+            "type": "game",
+            "minify": true
+        },
+        {
+            "name": "lodash",
+            "type": "game",
+            "minify": true
+        }
+
+    ]
+}

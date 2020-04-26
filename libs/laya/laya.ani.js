@@ -7,7 +7,8 @@
 	var Handler=laya.utils.Handler,Loader=laya.net.Loader,MathUtil=laya.maths.MathUtil,Matrix=laya.maths.Matrix;
 	var Node=laya.display.Node,Point=laya.maths.Point,Rectangle=laya.maths.Rectangle,Render=laya.renders.Render;
 	var RenderContext=laya.renders.RenderContext,Resource=laya.resource.Resource,RunDriver=laya.utils.RunDriver;
-	var Sprite=laya.display.Sprite,Stat=laya.utils.Stat,Texture=laya.resource.Texture,URL=laya.net.URL,Utils=laya.utils.Utils;
+	var SoundChannel=laya.media.SoundChannel,SoundManager=laya.media.SoundManager,Sprite=laya.display.Sprite;
+	var Stat=laya.utils.Stat,Texture=laya.resource.Texture,URL=laya.net.URL,Utils=laya.utils.Utils;
 /**
 *@private
 *@author ...
@@ -508,6 +509,8 @@ var BoneSlot=(function(){
 		this.currDisplayData=null;
 		/**显示皮肤的索引 */
 		this.displayIndex=-1;
+		/**@private */
+		this.originalIndex=-1;
 		/**用户自定义的皮肤 */
 		this._diyTexture=null;
 		this._parentMatrix=null;
@@ -573,7 +576,7 @@ var BoneSlot=(function(){
 	__proto.replaceDisplayByIndex=function(tarIndex,newIndex){
 		if (!this.currSlotData)return;
 		this._replaceDic[tarIndex]=newIndex;
-		if (this.displayIndex==tarIndex){
+		if (this.originalIndex==tarIndex){
 			this.showDisplayByIndex(tarIndex);
 		}
 	}
@@ -583,6 +586,7 @@ var BoneSlot=(function(){
 	*@param index
 	*/
 	__proto.showDisplayByIndex=function(index){
+		this.originalIndex=index;
 		if (this._replaceDic[index]!=null)index=this._replaceDic[index];
 		if (this.currSlotData && index >-1 && index < this.currSlotData.displayArr.length){
 			this.displayIndex=index;
@@ -590,11 +594,8 @@ var BoneSlot=(function(){
 			if (this.currDisplayData){
 				var tName=this.currDisplayData.name;
 				this.currTexture=this.templet.getTexture(tName);
-				if (this.currTexture && !Render.isConchApp && this.currDisplayData.type==0 && this.currDisplayData.uvs){
-					var cbID = this.currTexture.$cb_ID;
+				if (this.currTexture && this.currDisplayData.type==0 && this.currDisplayData.uvs && (!Render.isConchApp || (Render.isConchApp && Sprite.RUNTIMEVERION > "0.9.15"))){
 					this.currTexture=this.currDisplayData.createTexture(this.currTexture);
-					if(cbID) this.currTexture.$cb_ID = cbID;
-					//if(tName) this.currTexture.tName = tName;
 				}
 			}
 			}else {
@@ -1267,6 +1268,7 @@ var EventData=(function(){
 		this.intValue=0;
 		this.floatValue=NaN;
 		this.stringValue=null;
+		this.audioValue=null;
 		this.time=NaN;
 	}
 
@@ -2880,9 +2882,11 @@ var AnimationPlayer=(function(_super){
 	/**
 	*@private
 	*/
-	__proto._setPlayParamsWhenStop=function(currentAniClipPlayDuration,cacheFrameInterval){
+	__proto._setPlayParamsWhenStop=function(currentAniClipPlayDuration,cacheFrameInterval,playEnd){
+		(playEnd===void 0)&& (playEnd=-1);
 		this._currentTime=currentAniClipPlayDuration;
-		this._currentKeyframeIndex=Math.max(Math.floor(currentAniClipPlayDuration / cacheFrameInterval+0.01),0);
+		var endTime=playEnd > 0 ? playEnd :currentAniClipPlayDuration;
+		this._currentKeyframeIndex=Math.max(Math.floor(endTime / cacheFrameInterval+0.01),0);
 		this._currentFrameTime=this._currentKeyframeIndex *cacheFrameInterval;
 		this._currentAnimationClipIndex=-1;
 	}
@@ -2897,12 +2901,13 @@ var AnimationPlayer=(function(_super){
 		var time=0;
 		(this._startUpdateLoopCount!==Stat.loopCount)&& (time=elapsedTime *this.playbackRate,this._elapsedPlaybackTime+=time);
 		var currentAniClipPlayDuration=this.playDuration;
-		if ((this._overallDuration!==0 && this._elapsedPlaybackTime >=this._overallDuration)|| (this._overallDuration===0 && this._elapsedPlaybackTime >=currentAniClipPlayDuration)){
-			this._setPlayParamsWhenStop(currentAniClipPlayDuration,cacheFrameInterval);
+		time+=this._currentTime;
+		if ((this._overallDuration!==0 && this._elapsedPlaybackTime >=this._overallDuration)|| (this._overallDuration===0 && this._elapsedPlaybackTime >=currentAniClipPlayDuration)
+			|| (this._overallDuration===0 && time >=this.playEnd)){
+			this._setPlayParamsWhenStop(currentAniClipPlayDuration,cacheFrameInterval,this.playEnd);
 			this.event(/*laya.events.Event.STOPPED*/"stopped");
 			return;
 		}
-		time+=this._currentTime;
 		if (currentAniClipPlayDuration > 0){
 			if (time >=currentAniClipPlayDuration){
 				do {
@@ -2941,7 +2946,6 @@ var AnimationPlayer=(function(_super){
 		this._templet=null;
 		this._fullFrames=null;
 		this._destroyed=true;
-		this._templet=null;
 	}
 
 	/**
@@ -3927,6 +3931,8 @@ var Skeleton=(function(_super){
 		this._drawOrder=null;
 		this._lastAniClipIndex=-1;
 		this._lastUpdateAniClipIndex=-1;
+		this._playAudio=true;
+		this._soundChannelArr=[];
 		Skeleton.__super.call(this);
 		(aniMode===void 0)&& (aniMode=0);
 		if (templet)this.init(templet,aniMode);
@@ -4022,10 +4028,6 @@ var Skeleton=(function(_super){
 		Laya.loader.load([{url:path,type:/*laya.net.Loader.BUFFER*/"arraybuffer"}],Handler.create(this,this._onLoaded));
 	}
 
-	__proto.clear=function(){
-		this._complete = null;
-	}
-
 	/**
 	*加载完成
 	*/
@@ -4044,16 +4046,16 @@ var Skeleton=(function(_super){
 				if (tFactory.isParserComplete){
 					this._parseComplete();
 					}else {
-					tFactory.once(/*laya.events.Event.COMPLETE*/"complete",this,this._parseComplete);
-					tFactory.once(/*laya.events.Event.ERROR*/"error",this,this._parseFail);
+					tFactory.on(/*laya.events.Event.COMPLETE*/"complete",this,this._parseComplete);
+					tFactory.on(/*laya.events.Event.ERROR*/"error",this,this._parseFail);
 				}
 			}
 			}else {
 			tFactory=new Templet();
 			tFactory._setUrl(this._aniPath);
 			Templet.TEMPLET_DICTIONARY[this._aniPath]=tFactory;
-			tFactory.once(/*laya.events.Event.COMPLETE*/"complete",this,this._parseComplete);
-			tFactory.once(/*laya.events.Event.ERROR*/"error",this,this._parseFail);
+			tFactory.on(/*laya.events.Event.COMPLETE*/"complete",this,this._parseComplete);
+			tFactory.on(/*laya.events.Event.ERROR*/"error",this,this._parseFail);
 			tFactory.isParserComplete=false;
 			tFactory.parseData(null,arraybuffer);
 		}
@@ -4100,7 +4102,6 @@ var Skeleton=(function(_super){
 				}
 			}
 		}
-		this._eventIndex=0;
 		this._drawOrder=null;
 		this.event(/*laya.events.Event.STOPPED*/"stopped");
 	}
@@ -4167,9 +4168,6 @@ var Skeleton=(function(_super){
 	*@param autoKey true为正常更新，false为index手动更新
 	*/
 	__proto._update=function(autoKey){
-		if(this.destroyed){
-			return;
-		}
 		(autoKey===void 0)&& (autoKey=true);
 		if (this._pause)return;
 		if (autoKey && this._indexControl){
@@ -4197,20 +4195,29 @@ var Skeleton=(function(_super){
 		};
 		var tEventData;
 		var tEventAniArr=this._templet.eventAniArr;
-		if(tEventAniArr){
-			var tEventArr=tEventAniArr[this._aniClipIndex];
-			if (tEventArr && this._eventIndex < tEventArr.length){
-				tEventData=tEventArr[this._eventIndex];
-				if (tEventData.time >=this._player.playStart && tEventData.time <=this._player.playEnd){
-					if (this._player.currentPlayTime >=tEventData.time){
-						this.event(/*laya.events.Event.LABEL*/"label",tEventData);
-						this._eventIndex++;
-					}
-					}else {
+		var tEventArr=tEventAniArr[this._aniClipIndex];
+		var _soundChannel;
+		if (tEventArr && this._eventIndex < tEventArr.length){
+			tEventData=tEventArr[this._eventIndex];
+			if (tEventData.time >=this._player.playStart && tEventData.time <=this._player.playEnd){
+				if (this._player.currentPlayTime >=tEventData.time){
+					this.event(/*laya.events.Event.LABEL*/"label",tEventData);
 					this._eventIndex++;
+					if (this._playAudio && tEventData.audioValue && tEventData.audioValue!=="null"){
+						_soundChannel=SoundManager.playSound(this._player.templet._path+tEventData.audioValue,1,Handler.create(this,this._onAniSoundStoped));
+						SoundManager.playbackRate=this._player.playbackRate;
+						_soundChannel && this._soundChannelArr.push(_soundChannel);
+					}
 				}
-			};
-		}
+				}else if (tEventData.time < this._player.playStart && this._playAudio && tEventData.audioValue && tEventData.audioValue!=="null"){
+				this._eventIndex++;
+				_soundChannel=SoundManager.playSound(this._player.templet._path+tEventData.audioValue,1,Handler.create(this,this._onAniSoundStoped),null,(this._player.currentPlayTime-tEventData.time)/ 1000);
+				SoundManager.playbackRate=this._player.playbackRate;
+				_soundChannel && this._soundChannelArr.push(_soundChannel);
+				}else {
+				this._eventIndex++;
+			}
+		};
 		var tGraphics;
 		if (this._aniMode==0){
 			tGraphics=this._templet.getGrahicsDataWithCache(this._aniClipIndex,this._clipIndex);
@@ -4251,6 +4258,23 @@ var Skeleton=(function(_super){
 			}
 		}
 		this._createGraphics();
+	}
+
+	/**
+	*@private
+	*清掉播放完成的音频
+	*@param force 是否强制删掉所有的声音channel
+	*/
+	__proto._onAniSoundStoped=function(force){
+		var _channel;
+		for (var len=this._soundChannelArr.length,i=0;i < len;i++){
+			_channel=this._soundChannelArr[i];
+			if (_channel.isStopped || force){
+				!_channel.isStopped && _channel.stop();
+				this._soundChannelArr.splice(i,1);
+				len--;i--;
+			}
+		}
 	}
 
 	/**
@@ -4688,12 +4712,15 @@ var Skeleton=(function(_super){
 	*@param start 起始时间
 	*@param end 结束时间
 	*@param freshSkin 是否刷新皮肤数据
+	*@param playAudio 是否播放音频
 	*/
-	__proto.play=function(nameOrIndex,loop,force,start,end,freshSkin){
+	__proto.play=function(nameOrIndex,loop,force,start,end,freshSkin,playAudio){
 		(force===void 0)&& (force=true);
 		(start===void 0)&& (start=0);
 		(end===void 0)&& (end=0);
 		(freshSkin===void 0)&& (freshSkin=true);
+		(playAudio===void 0)&& (playAudio=true);
+		this._playAudio=playAudio;
 		this._indexControl=false;
 		var index=-1;
 		var duration=NaN;
@@ -4742,6 +4769,9 @@ var Skeleton=(function(_super){
 			if (this._player){
 				this._player.stop(true);
 			}
+			if (this._soundChannelArr.length > 0){
+				this._onAniSoundStoped(true);
+			}
 			this.timer.clear(this,this._update);
 		}
 	}
@@ -4765,6 +4795,15 @@ var Skeleton=(function(_super){
 			if (this._player){
 				this._player.paused=true;
 			}
+			if (this._soundChannelArr.length > 0){
+				var _soundChannel;
+				for (var len=this._soundChannelArr.length,i=0;i < len;i++){
+					_soundChannel=this._soundChannelArr[i];
+					if (!_soundChannel.isStopped){
+						_soundChannel.pause();
+					}
+				}
+			}
 			this.timer.clear(this,this._update);
 		}
 	}
@@ -4778,6 +4817,15 @@ var Skeleton=(function(_super){
 			this._pause=false;
 			if (this._player){
 				this._player.paused=false;
+			}
+			if (this._soundChannelArr.length > 0){
+				var _soundChannel;
+				for (var len=this._soundChannelArr.length,i=0;i < len;i++){
+					_soundChannel=this._soundChannelArr[i];
+					if (_soundChannel.audioBuffer){
+						_soundChannel.resume();
+					}
+				}
 			}
 			this._lastTime=Browser.now();
 			this.timer.frameLoop(1,this,this._update,null,true);
@@ -4813,31 +4861,15 @@ var Skeleton=(function(_super){
 		(destroyChild===void 0)&& (destroyChild=true);
 		_super.prototype.destroy.call(this,destroyChild);
 		this._templet=null;
-		if (this._player){
-			this._player.offAll();
-			this._player._destroy();
-			this._player=null;
-		}
+		if (this._player)this._player.offAll();
+		this._player=null;
 		this._curOriginalData=null;
+		this._boneMatrixArray.length=0;
+		this._lastTime=0;
 		this.timer.clear(this,this._update);
-		this._boneMatrixArray=null;
-		this._currAniName=null;
-		this._skinName=null;
-		this._graphicsCache=null;
-		this._boneSlotDic=null;
-		this._bindBoneBoneSlotDic=null;
-		this._boneSlotArray=null;
-		this._aniPath=null;
-		this._texturePath=null;
-		this._complete=null;
-		this._yReverseMatrix=null;
-		this._ikArr=null;
-		this._tfArr=null;
-		this._pathDic=null;
-		this._rootBone=null;
-		this._boneList=null;
-		this._aniSectionDic=null;
-		this._drawOrder=null;
+		if (this._soundChannelArr.length > 0){
+			this._onAniSoundStoped(true);
+		}
 	}
 
 	/**
@@ -4876,7 +4908,7 @@ var Skeleton=(function(_super){
 	*/
 	__getset(0,__proto,'total',function(){
 		if (this._templet && this._player){
-			this._total=Math.floor(this._templet.getAniDuration(this._player.currentAnimationClipIndex==-1?0:this._player.currentAnimationClipIndex)/ 1000 *this._player.cacheFrameRate);
+			this._total=Math.floor(this._templet.getAniDuration(this._player.currentAnimationClipIndex)/ 1000 *this._player.cacheFrameRate);
 			}else {
 			this._total=-1;
 		}
@@ -5265,7 +5297,7 @@ var MovieClip=(function(_super){
 	*/
 	__proto.load=function(url,atlas,atlasPath){
 		(atlas===void 0)&& (atlas=false);
-		this._url=url=URL.formatURL(url);
+		this._url=url;
 		if(atlas)this._atlasPath=atlasPath?atlasPath:url.split(".swf")[0]+".json";
 		this.stop();
 		this._clear();
@@ -5284,6 +5316,10 @@ var MovieClip=(function(_super){
 		data=Loader.getRes(this._url);
 		if (!data){
 			this.event(/*laya.events.Event.ERROR*/"error","file not find");
+			return;
+		}
+		if (this._atlasPath && !Loader.getAtlas(this._atlasPath)){
+			this.event(/*laya.events.Event.ERROR*/"error","Atlas not find");
 			return;
 		}
 		this.basePath=this._atlasPath?Loader.getAtlas(this._atlasPath).dir:this._url.split(".swf")[0]+"/image/";
@@ -5403,6 +5439,8 @@ var Templet=(function(_super){
 		this.attachmentNames=null;
 		/**顶点动画数据 */
 		this.deformAniArr=[];
+		/**是否需要解析audio数据 */
+		this._isParseAudio=false;
 		this._isDestroyed=false;
 		this._rate=30;
 		this.isParserComplete=false;
@@ -5481,7 +5519,9 @@ var Templet=(function(_super){
 	__proto.parse=function(data){
 		_super.prototype.parse.call(this,data);
 		this._endLoaded();
-		if (this._aniVersion !=Templet.LAYA_ANIMATION_VISION){
+		if (this._aniVersion===Templet.LAYA_ANIMATION_VISION){
+			this._isParseAudio=true;
+			}else if (this._aniVersion !=Templet.LAYA_ANIMATION_160_VISION){
 			console.log("[Error] 版本不一致，请使用IDE版本配套的重新导出"+this._aniVersion+"->"+Templet.LAYA_ANIMATION_VISION);
 			this._loaded=false;
 		}
@@ -5595,9 +5635,6 @@ var Templet=(function(_super){
 			tTempleData=tByte.getFloat32();
 			tFrameHeight=isNaN(tTempleData)? tHeight :tTempleData;
 			this.subTextureDic[tTextureName]=Texture.create(tTexture,tX,tY,tWidth,tHeight,-tFrameX,-tFrameY,tFrameWidth,tFrameHeight);
-			if (tTextureName.substr(0, 10) ===  "{coloradd}") 　{
-				this.subTextureDic[tTextureName].$cb_ID = Laya.BlendMode.LIGHT
-			};
 		}
 		this._mainTexture=tTexture;
 		var tAniCount=tByte.getUint16();
@@ -5809,6 +5846,7 @@ var Templet=(function(_super){
 			for (j=0;j < tEventLen;j++){
 				tEventData=new EventData();
 				tEventData.name=tByte.getUTFString();
+				if (this._isParseAudio)tEventData.audioValue=tByte.getUTFString();
 				tEventData.intValue=tByte.getInt32();
 				tEventData.floatValue=tByte.getFloat32();
 				tEventData.stringValue=tByte.getUTFString();
@@ -6014,7 +6052,10 @@ var Templet=(function(_super){
 	*@return
 	*/
 	__proto.getGrahicsDataWithCache=function(aniIndex,frameIndex){
-		return this._graphicsCache[aniIndex][frameIndex];
+		if (this._graphicsCache[aniIndex] && this._graphicsCache[aniIndex][frameIndex]){
+			return this._graphicsCache[aniIndex][frameIndex];
+		}
+		return null;
 	}
 
 	/**
@@ -6051,23 +6092,6 @@ var Templet=(function(_super){
 			tSkinSlotDisplayData.destory();
 		}
 		this.skinSlotDisplayDataArr.length=0;
-		if(Templet.TEMPLET_DICTIONARY && Templet.TEMPLET_DICTIONARY[this.url]){
-			this.offAll();
-			if(this._graphicsCache){
-				for(var i = 0; i < this._graphicsCache.length; i ++){
-					if(this._graphicsCache[i]){
-						for(var j = 0; j < this._graphicsCache[i].length; j ++){
-							if(this._graphicsCache[i][j]){
-								this._graphicsCache[i][j].destroy();
-								this._graphicsCache[i][j] = null;
-							}
-						}
-						this._graphicsCache[i] = null;
-					}
-				}
-				this._graphicsCache=null;
-			}
-		}
 		if (this.url){
 			delete Templet.TEMPLET_DICTIONARY[this.url];
 		}
@@ -6091,7 +6115,8 @@ var Templet=(function(_super){
 		this._rate=v;
 	});
 
-	Templet.LAYA_ANIMATION_VISION="LAYAANIMATION:1.6.0";
+	Templet.LAYA_ANIMATION_160_VISION="LAYAANIMATION:1.6.0";
+	Templet.LAYA_ANIMATION_VISION="LAYAANIMATION:1.7.0";
 	Templet.TEMPLET_DICTIONARY=null;
 	return Templet;
 })(AnimationTemplet)

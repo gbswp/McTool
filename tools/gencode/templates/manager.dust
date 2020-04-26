@@ -1,0 +1,12 @@
+namespace app {
+    export class {className} {
+         static NAME = "{className}";
+        constructor() {
+
+        }
+
+        {#protoItems}{>func /}{/protoItems}
+    }
+}
+
+

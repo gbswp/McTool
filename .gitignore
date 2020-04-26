@@ -1,0 +1,6 @@
+bin/
+src/gen/
+node_modules/
+index.html
+index.js
+

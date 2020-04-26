@@ -1,0 +1,4 @@
+<page>
+   <item name="common/Title.ui" props="left = 0@@!@@right = 0@@!@@var=titleBar" ifExport="默认"/>
+   <item name="common/RoleTitleView.ui" props="left=0@@!@@right=0@@!@@var=titleBar" ifExport="默认"/>
+</page>

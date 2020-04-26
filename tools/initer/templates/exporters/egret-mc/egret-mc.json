@@ -1,0 +1,24 @@
+{% load TransformCoords %}
+{
+    "res":{{% for sprite in allSprites %}
+        "{{sprite.trimmedName}}":{
+            "x":{{sprite.frameRect.x}},
+            "y":{{sprite.frameRect.y}},
+            "w":{{sprite.frameRect.width}},
+            "h":{{sprite.frameRect.height}}
+        }{% if not forloop.last %},{% endif %}{% endfor %}
+    },
+    "mc":{
+        "{{allSprites|MotionName}}":{
+            "frames":[{% for sprite in allSprites %}
+                {
+                    "x":{{sprite|TrimmedPivotX}},
+                    "y":{{sprite|TrimmedPivotY}},
+                    "res":"{{sprite.trimmedName}}"
+                }{% if not forloop.last %},{% endif %}{% endfor %}
+            ],
+            "frameRate":15,
+            "events":[]
+        }
+    }
+}

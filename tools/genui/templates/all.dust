@@ -1,0 +1,23 @@
+
+{@iter obj=settings.uiimports}import {$key} = {$value};
+{/iter}
+
+{#uifiles}{>uifile dynview=dynview/}
+{/uifiles}
+
+namespace app.ui {
+    export let dynview = {#dynview}true{:else}false{/dynview};
+    export function registerComponents() {
+        let r1 = View.regComponent;
+        {! let r2 = View.regViewRuntime; !}
+        {@iter obj=settings.components}r1("{$key}", {$value});
+        {/iter}
+        {! {@iter obj=viewMap}r2("{$key}", {$key});
+        {/iter} !}
+        let registerFontRes = (Laya.BitmapFont as any).registerFontRes;
+        if (registerFontRes) {{@iter obj=fontMap}
+            registerFontRes("{$key}", "{$value}");{/iter}
+        }
+    }
+}
+

@@ -1,0 +1,54 @@
+<exporter version="1.0">
+    <!-- identifier of the exporter -->
+    <name>egret-mc</name>
+
+    <!-- display name of the exporter for the combo box -->
+    <displayName>egret-mc</displayName>
+
+    <!-- description of the exporter -->
+    <description>exporter for egret movieclip</description>
+
+    <!-- exporter version -->
+    <version>1.0</version>
+
+    <!-- currently only one file allowed - more to come with update -->
+    <files>
+        <file>
+            <!-- name of this file variable -->
+            <name>json</name>
+
+            <!-- human readable name (for GUI) -->
+            <displayName>egret-mc json file</displayName>
+
+            <!-- file extension for the file -->
+            <fileExtension>json</fileExtension>
+
+            <!-- description what the file contains, used in tooltips in the GUI -->
+            <description>json file for egret movieclip</description>
+
+            <!-- name of the template file -->
+            <template>egret-mc.json</template>
+        </file>
+    </files>
+
+    <!-- target framework supports trimming -->
+    <supportsTrimming>yes</supportsTrimming>
+
+    <!-- target framework supports rotation -->
+    <supportsRotation>no</supportsRotation>
+
+    <!-- rotated sprites direction (cw/ccw) -->
+    <rotationDirection>cw</rotationDirection>
+
+    <!-- supports npot sizes -->
+    <supportsNPOT>yes</supportsNPOT>
+
+    <!-- supports file name stripping (remove .png etc) -->
+    <supportsTrimSpriteNames>no</supportsTrimSpriteNames>
+
+    <!-- supports texure subpath -->
+    <supportsTextureSubPath>yes</supportsTextureSubPath>
+
+</exporter>
+
+

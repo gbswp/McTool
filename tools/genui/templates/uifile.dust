@@ -1,0 +1,19 @@
+{#dynview}declare{/dynview} namespace app.{moduleName} {
+    {#hasEvents}
+    export interface I{className} {
+        {@eventsDecl obj=events}{.}
+        {/eventsDecl}
+    }{/hasEvents}
+
+    export class {className} extends app.ui.{inherit} {
+        {@iter obj=vars}
+        public {$key}: {$value};{/iter}
+        public static uiView: any{^dynview} = {uiObj|js|s}{/dynview};
+        public static uiResMap: any{^dynview} = [{@iter obj=uiResMap}{url: "{$key}", type: "{$value}"}{@sep},{/sep}{/iter}]{/dynview};
+        public static uiResRef: any{^dynview} = [{@iter obj=uiResRef}{url: "{$key}", refCount: {$value}}{@sep},{/sep}{/iter}]{/dynview};
+        public static uiEvent:any{#dynview}{:else} = {events|js|s}{/dynview};
+        {#hasGuideId}public static uiGuide:any = {guideIds|js|s};{/hasGuideId}
+        {#hasOpenKey}public static uiOpen:any{#dynview}{:else} = {openKeys|js|s}{/dynview};{/hasOpenKey}
+        {! constructor() { super(); } !}
+    }
+}

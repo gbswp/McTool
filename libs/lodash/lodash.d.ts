@@ -12619,7 +12619,7 @@ declare module _ {
          * @param value The value to check.
          * @returns Returns true if value is correctly classified, else false.
          */
-        isWeakMap<K, V>(value?: any): boolean;
+        isWeakMap<K, V>(value?: any): value is WeakMap<K, V>;
     }
 
     interface LoDashImplicitWrapperBase<T, TWrapper> {
@@ -12644,7 +12644,7 @@ declare module _ {
          * @param value The value to check.
          * @returns Returns true if value is correctly classified, else false.
          */
-        isWeakSet<T>(value?: any): boolean;
+        isWeakSet<T>(value?: any): value is WeakSet<T>;
     }
 
     interface LoDashImplicitWrapperBase<T, TWrapper> {

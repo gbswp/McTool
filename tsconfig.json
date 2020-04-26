@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    // "module": "commonjs",
+    "target": "es5",
+    "experimentalDecorators": true,
+    "outFile": "bin/js/game.js",
+    "outDir": "bin/js",
+    "removeComments": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "sourceMap": false,
+    "allowJs": true
+  },
+  "include": [
+    "libs/**/*.ts",
+    "src/init.ts",
+    "src/Event.ts",
+    "src/base/**/*.ts",
+    "src/gen/layaUI.max.all.ts",
+    "src/gen/layaUIRegister.js",
+    "src/*/**/*.ts",
+    "src/Main.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

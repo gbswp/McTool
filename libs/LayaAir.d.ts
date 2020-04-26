@@ -1801,7 +1801,7 @@ declare module laya.d3.component {
      */
     class Animator extends Component3D implements IDestroy {
         /**无效矩阵,禁止修改*/
-        static nanData: Float32Array;
+        static deafaultMatrix: Float32Array;
         _cacheNodesSpriteOwners: Array<any>;
         _curAvatarNodeDatas: Array<any>;
         _cacheNodesToSpriteMap: Array<any>;
@@ -8279,39 +8279,39 @@ declare module laya.d3.core.trail.module {
         /**
          * 红色
          */
-        static red: Color;
+        static RED: Color;
         /**
          * 绿色
          */
-        static green: Color;
+        static GREEN: Color;
         /**
          * 蓝色
          */
-        static blue: Color;
+        static BLUE: Color;
         /**
          * 蓝绿色
          */
-        static cyan: Color;
+        static CYAN: Color;
         /**
          * 黄色
          */
-        static yellow: Color;
+        static YELLOW: Color;
         /**
          * 品红色
          */
-        static magenta: Color;
+        static MAGENTA: Color;
         /**
          * 灰色
          */
-        static gray: Color;
+        static GRAY: Color;
         /**
          * 白色
          */
-        static white: Color;
+        static WHITE: Color;
         /**
          * 黑色
          */
-        static black: Color;
+        static BLACK: Color;
         r: number;
         g: number;
         b: number;
@@ -9743,6 +9743,7 @@ declare module laya.d3.graphics {
         static SIMULATIONWORLDPOSTION: number;
         static SIMULATIONWORLDROTATION: number;
         static TEXTURECOORDINATE0X: number;
+        static TEXTURECOORDINATE0X1: number;
         static TEXTURECOORDINATE0Y: number;
         static OFFSETVECTOR: number;
     }
@@ -10821,8 +10822,8 @@ declare module laya.d3.math {
         static intersectsRayAndTriangleRP(ray: Ray, vertex1: Vector3, vertex2: Vector3, vertex3: Vector3, out: Vector3): boolean;
         /**
          * 空间中射线和点是否相交
-         * @param	sphere1 包围球1
-         * @param	sphere2 包围球2
+         * @param	ray   射线
+         * @param	point 点
          */
         static intersectsRayAndPoint(ray: Ray, point: Vector3): boolean;
         /**
@@ -11458,6 +11459,8 @@ declare module laya.d3.math {
          */
         containsSphere(sphere: BoundSphere, ignoreScale?: boolean): number;
         /**
+         *  For accuracy, The transformation matrix for both <see cref="OrientedBoundingBox"/> must not have any scaling applied to it.
+         *  Anyway, scaling using Scale method will keep this method accurate.
          * 该包围盒是否包含空间中另一OBB包围盒
          * @param	obb OBB包围盒
          * @return  返回位置关系
@@ -14973,9 +14976,6 @@ declare module laya.display {
 /* patch start */
 static registerFontRes(font: string, res: string): void;
 /* patch end */
-
-
-
         protected _texture: Texture;
         protected _fontCharDic: any;
         protected _fontWidthMap: any;
@@ -15620,6 +15620,31 @@ declare module laya.display {
          * @param offset	（可选）贴图纹理偏移
          */
         fillTexture(tex: Texture, x: number, y: number, width?: number, height?: number, type?: string, offset?: Point): void;
+        /**
+         * 填充一个圆形。这是一个临时函数，以后会删除，建议用户自己实现。
+         * @param	x
+         * @param	y
+         * @param	tex
+         * @param	cx		圆心位置。
+         * @param	cy
+         * @param	radius
+         * @param	segNum	分段数，越大越平滑。
+         */
+        fillCircle(x: number, y: number, tex: Texture, cx: number, cy: number, radius: number, segNum: number): void;
+        /**
+         * 绘制一组三角形
+         * @param texture	纹理。
+         * @param x			X轴偏移量。
+         * @param y			Y轴偏移量。
+         * @param vertices  顶点数组。
+         * @param indices	顶点索引。
+         * @param uvData	UV数据。
+         * @param matrix	缩放矩阵。
+         * @param alpha		alpha
+         * @param color		颜色变换
+         * @param blendMode	blend模式
+         */
+        drawTriangles(texture: Texture, x: number, y: number, vertices: Float32Array, uvs: Float32Array, indices: Uint16Array, matrix?: Matrix, alpha?: number, color?: string, blendMode?: string): void;
         /**
          * @private
          * 保存到命令流。
@@ -17287,9 +17312,6 @@ format: string;
 value: string | any[];
 setFont(font: string): void;
 /* patch end */
-
-
-
         /**
          * 判断系统是否支持指定的font。
          *
@@ -17440,7 +17462,9 @@ declare module laya.events {
         /**退出触发器时触发。*/
         static TRIGGER_EXIT: string;
         /**拖尾渲染节点改变时触发。*/
-        static TRAIL_Filter_CHANGE: string;
+        static TRAIL_FILTER_CHANGE: string;
+        /**多米诺渲染节点改变时触发。*/
+        static DOMINO_FILTER_CHANGE: string;
         /** 事件类型。*/
         type: string;
         /** 原生浏览器事件。*/
@@ -19908,9 +19932,6 @@ declare module laya.net {
 /* patch start */
 static clearTextureResByGroup(group:string): void;
 /* patch end */
-
-
-
         /** 文本类型，加载完成后返回文本。*/
         static TEXT: string;
         /** JSON 类型，加载完成后返回json数据。*/
@@ -20049,9 +20070,6 @@ declare module laya.net {
 /* patch start */
 loadP(url: any, type?: string, priority?: number, progress?: Handler, cache?: boolean, group?: string, ignoreCache?: boolean): Promise<void>;
 /* patch end */
-
-
-
         static createMap: any;
         /** 加载出错后的重试次数，默认重试一次*/
         retryNum: number;
@@ -21094,6 +21112,14 @@ declare module laya.renders {
         _fillRect: Function;
         drawCircle(x: number, y: number, radius: number, color: string, lineWidth?: number): void;
         _drawCircle: Function;
+        /**
+         * 绘制三角形
+         * @param	x
+         * @param	y
+         * @param	tex
+         * @param	args [x, y, texture,vertices,indices,uvs,matrix]
+         */
+        drawTriangles(x: number, y: number, args: Array<any>): void;
         fillCircle(x: number, y: number, radius: number, color: string): void;
         _fillCircle: Function;
         setShader(shader: any): void;
@@ -21270,6 +21296,7 @@ declare module laya.resource {
         drawTextureWithTransform(tex: Texture, x: number, y: number, width: number, height: number, m: Matrix, tx: number, ty: number, alpha: number): void;
         drawTexture2(x: number, y: number, pivotX: number, pivotY: number, m: Matrix, alpha: number, blendMode: string, args2: Array<any>): void;
         fillTexture(texture: Texture, x: number, y: number, width: number, height: number, type: string, offset: Point, other: any): void;
+        drawTriangle(texture: Texture, vertices: Float32Array, uvs: Float32Array, index0: number, index1: number, index2: number, matrix: Matrix, canvasPadding: boolean): void;
         flush(): number;
         fillWords(words: Array<any>, x: number, y: number, font: string, color: string, underLine: number): void;
         fillBorderWords(words: Array<any>, x: number, y: number, font: string, color: string, borderColor: string, lineWidth: number): void;
@@ -22238,9 +22265,6 @@ declare module laya.ui {
 /* patch start */
 soundId:string
 /* patch end */
-
-
-
         protected static stateMap: any;
         /**
          * 指定按钮按下时是否是切换按钮的显示状态。
@@ -23100,9 +23124,6 @@ badgeEnable: boolean;
 updateBadge():void;
 openKey:string
 /* patch end */
-
-
-
         protected _layout: LayoutStyle;
         protected _dataSource: any;
         protected _toolTip: any;
@@ -24211,9 +24232,6 @@ format: string;
 value: string | any[];
 setFont(font: string): void;
 /* patch end */
-
-
-
     }
 }
 declare module laya.ui {
@@ -25135,7 +25153,7 @@ declare module laya.ui {
         protected _max: number;
         protected _min: number;
         protected _tick: number;
-        protected _value: number;
+
         protected _skin: string;
         protected _bg: Image;
         protected _progress: Image;
@@ -25185,7 +25203,11 @@ declare module laya.ui {
          * 滑动的刻度值，滑动数值为tick的整数倍。默认值为1。
          */
         tick: number;
-        protected changeValue(): void;
+        /**
+         * @private
+         * 改变滑块的位置值。
+         */
+        changeValue(): void;
         /**
          * 获取或设置表示最高位置的数字。 默认值为100。
          */
@@ -26213,6 +26235,7 @@ declare module laya.ui {
     }
 }
 declare module laya.ui {
+    import Event = laya.events.Event;
     import Box = laya.ui.Box;
     import Component = laya.ui.Component;
     /**
@@ -26225,11 +26248,13 @@ declare module laya.ui {
         /**UI类映射。*/
         static uiClassMap: any;
         protected static viewClassMap: any;
+        static eventDic: any;
         _idMap: any;
         _aniList: Array<any>;
         _watchMap: any;
         static _sheet: any;
         protected createView(uiView: any): void;
+        protected onEvent(type: string, event: Event): void;
         protected loadUI(path: string): void;
         /**
          * 根据UI数据实例化组件。
@@ -26497,9 +26522,6 @@ declare module laya.utils {
 /* patch start */
 static onIPhoneX: boolean;
 /* patch end */
-
-
-
         /** 浏览器代理信息。*/
         static userAgent: string;
         /** 表示是否在 ios 设备。*/
@@ -26512,8 +26534,6 @@ static onIPhoneX: boolean;
         static onIPhone: boolean;
         /** 表示是否在 ipad 设备。*/
         static onIPad: boolean;
-        /** 表示是否在 Android设备。*/
-        static onAndriod: boolean;
         /** 表示是否在 Android设备。*/
         static onAndroid: boolean;
         /** 表示是否在 Windows Phone 设备。*/
@@ -26533,6 +26553,8 @@ static onIPhoneX: boolean;
         /** 微信内*/
         static onWeiXin: boolean;
         static onMiniGame: boolean;
+        static onBDMiniGame: boolean;
+        static onLimixiu: boolean;
         /** 表示是否在 PC 端。*/
         static onPC: boolean;
         /** 表示是否是 HTTP 协议。*/
@@ -27899,6 +27921,10 @@ declare module laya.utils {
         /**
          * 清空纹理函数。
          */
+        static cancelLoadByUrl: Function;
+        /**
+         * 清空纹理函数。
+         */
         static clearAtlas: Function;
         static isAtlas: Function;
         static addTextureToAtlas: Function;
@@ -28253,9 +28279,6 @@ declare module laya.utils {
 /* patch start */
 static to(target: any, props: any, duration: number, ease?: Function, complete?: Handler, delay?: number, coverBefore?: boolean, autoRecover?: boolean): TweenWrapper;
 /* patch end */
-
-
-
         /**
          * 从props属性，缓动到当前状态。
          * @param	target 目标对象(即将更改属性值的对象)。
@@ -28272,9 +28295,6 @@ static to(target: any, props: any, duration: number, ease?: Function, complete?:
 /* patch start */
 static from(target: any, props: any, duration: number, ease?: Function, complete?: Handler, delay?: number, coverBefore?: boolean, autoRecover?: boolean): TweenWrapper;
 /* patch end */
-
-
-
         /**
          * 缓动对象的props属性到目标值。
          * @param	target 目标对象(即将更改属性值的对象)。
@@ -28290,9 +28310,6 @@ static from(target: any, props: any, duration: number, ease?: Function, complete
 /* patch start */
 to(target: any, props: any, duration: number, ease?: Function, complete?: Handler, delay?: number, coverBefore?: boolean): TweenWrapper;
 /* patch end */
-
-
-
         /**
          * 从props属性，缓动到当前状态。
          * @param	target 目标对象(即将更改属性值的对象)。
@@ -28308,9 +28325,6 @@ to(target: any, props: any, duration: number, ease?: Function, complete?: Handle
 /* patch start */
 from(target: any, props: any, duration: number, ease?: Function, complete?: Handler, delay?: number, coverBefore?: boolean): TweenWrapper;
 /* patch end */
-
-
-
         _create(target: any, props: any, duration: number, ease: Function, complete: Handler, delay: number, coverBefore: boolean, isTo: boolean, usePool: boolean, runNow: boolean): Tween;
         _updateEase(time: number): void;
         /**设置当前执行比例**/
@@ -28797,238 +28811,11 @@ declare module laya.webgl.canvas {
         recover(): void;
     }
 }
-declare module laya.webgl.canvas.save {
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    interface ISaveData {
-        isSaveMark(): boolean;
-        restore(context: WebGLContext2D): void;
-    }
-}
-declare module laya.webgl.canvas.save {
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    class SaveBase implements ISaveData {
-        static TYPE_ALPHA: number;
-        static TYPE_FILESTYLE: number;
-        static TYPE_FONT: number;
-        static TYPE_LINEWIDTH: number;
-        static TYPE_STROKESTYLE: number;
-        static TYPE_MARK: number;
-        static TYPE_TRANSFORM: number;
-        static TYPE_TRANSLATE: number;
-        static TYPE_ENABLEMERGE: number;
-        static TYPE_TEXTBASELINE: number;
-        static TYPE_TEXTALIGN: number;
-        static TYPE_GLOBALCOMPOSITEOPERATION: number;
-        static TYPE_CLIPRECT: number;
-        static TYPE_CLIPRECT_STENCIL: number;
-        static TYPE_IBVB: number;
-        static TYPE_SHADER: number;
-        static TYPE_FILTERS: number;
-        static TYPE_FILTERS_TYPE: number;
-        static _createArray(): Array<any>;
-        static _init(): any;
-        constructor();
-        isSaveMark(): boolean;
-        restore(context: WebGLContext2D): void;
-        static save(context: WebGLContext2D, type: number, dataObj: any, newSubmit: boolean): void;
-    }
-}
-declare module laya.webgl.canvas.save {
-    import Rectangle = laya.maths.Rectangle;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    import SubmitScissor = laya.webgl.submit.SubmitScissor;
-    class SaveClipRect implements ISaveData {
-        _clipSaveRect: Rectangle;
-        _clipRect: Rectangle;
-        _submitScissor: SubmitScissor;
-        isSaveMark(): boolean;
-        restore(context: WebGLContext2D): void;
-        static save(context: WebGLContext2D, submitScissor: SubmitScissor): void;
-    }
-}
-declare module laya.webgl.canvas.save {
-    import Matrix = laya.maths.Matrix;
-    import Rectangle = laya.maths.Rectangle;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    import SubmitStencil = laya.webgl.submit.SubmitStencil;
-    class SaveClipRectStencil implements ISaveData {
-        _clipSaveRect: Rectangle;
-        _clipRect: Rectangle;
-        _rect: Rectangle;
-        _saveMatrix: Matrix;
-        _matrix: Matrix;
-        _contextX: number;
-        _contextY: number;
-        _submitStencil: SubmitStencil;
-        isSaveMark(): boolean;
-        restore(context: WebGLContext2D): void;
-        static save(context: WebGLContext2D, submitStencil: SubmitStencil, x: number, y: number, width: number, height: number, clipX: number, clipY: number, clipWidth: number, clipHeight: number): void;
-    }
-}
-declare module laya.webgl.canvas.save {
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    class SaveMark implements ISaveData {
-        _saveuse: number;
-        _preSaveMark: SaveMark;
-        constructor();
-        isSaveMark(): boolean;
-        restore(context: WebGLContext2D): void;
-        static Create(context: WebGLContext2D): SaveMark;
-    }
-}
-declare module laya.webgl.canvas.save {
-    import Matrix = laya.maths.Matrix;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    class SaveTransform implements ISaveData {
-        _savematrix: Matrix;
-        _matrix: Matrix;
-        constructor();
-        isSaveMark(): boolean;
-        restore(context: WebGLContext2D): void;
-        static save(context: WebGLContext2D): void;
-    }
-}
-declare module laya.webgl.canvas.save {
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    class SaveTranslate implements ISaveData {
-        _x: number;
-        _y: number;
-        isSaveMark(): boolean;
-        restore(context: WebGLContext2D): void;
-        static save(context: WebGLContext2D): void;
-    }
-}
-declare module laya.webgl.canvas {
-    import Sprite = laya.display.Sprite;
-    import Matrix = laya.maths.Matrix;
-    import Point = laya.maths.Point;
-    import Rectangle = laya.maths.Rectangle;
-    import Context = laya.resource.Context;
-    import HTMLCanvas = laya.resource.HTMLCanvas;
-    import Texture = laya.resource.Texture;
-    import SaveMark = laya.webgl.canvas.save.SaveMark;
-    import RenderTargetMAX = laya.webgl.resource.RenderTargetMAX;
-    import Shader = laya.webgl.shader.Shader;
-    import Shader2D = laya.webgl.shader.d2.Shader2D;
-    import Value2D = laya.webgl.shader.d2.value.Value2D;
-    import ISubmit = laya.webgl.submit.ISubmit;
-    import FontInContext = laya.webgl.text.FontInContext;
-    import IndexBuffer2D = laya.webgl.utils.IndexBuffer2D;
-    import VertexBuffer2D = laya.webgl.utils.VertexBuffer2D;
-    class WebGLContext2D extends Context {
-        static _tempPoint: Point;
-        static _SUBMITVBSIZE: number;
-        static _MAXSIZE: number;
-        static _RECTVBSIZE: number;
-        static MAXCLIPRECT: Rectangle;
-        static _COUNT: number;
-        static _tmpMatrix: Matrix;
-        static __init__(): void;
-        _x: number;
-        _y: number;
-        _id: number;
-        _submits: any;
-        _curSubmit: any;
-        _ib: IndexBuffer2D;
-        _vb: VertexBuffer2D;
-        _clipRect: Rectangle;
-        _curMat: Matrix;
-        _nBlendType: number;
-        _save: any;
-        _targets: RenderTargetMAX;
-        _renderKey: number;
-        _saveMark: SaveMark;
-        _shader2D: Shader2D;
-        /**所cacheAs精灵*/
-        sprite: Sprite;
-        constructor(c: HTMLCanvas);
-        setIsMainContext(): void;
-        clearBG(r: number, g: number, b: number, a: number): void;
-        _getSubmits(): Array<any>;
-        destroy(): void;
-        clear(): void;
-        size(w: number, h: number): void;
-        asBitmap: boolean;
-        _getTransformMatrix(): Matrix;
-        fillStyle: any;
-        globalAlpha: number;
-        textAlign: string;
-        textBaseline: string;
-        globalCompositeOperation: string;
-        strokeStyle: any;
-        translate(x: number, y: number): void;
-        lineWidth: number;
-        save(): void;
-        restore(): void;
-        font: string;
-        fillWords(words: Array<any>, x: number, y: number, fontStr: string, color: string, underLine: number): void;
-        fillBorderWords(words: Array<any>, x: number, y: number, font: string, color: string, borderColor: string, lineWidth: number): void;
-        fillText(txt: any, x: number, y: number, fontStr: string, color: string, textAlign: string): void;
-        strokeText(txt: any, x: number, y: number, fontStr: string, color: string, lineWidth: number, textAlign: string): void;
-        fillBorderText(txt: any, x: number, y: number, fontStr: string, fillColor: string, borderColor: string, lineWidth: number, textAlign: string): void;
-        fillRect(x: number, y: number, width: number, height: number, fillStyle: any): void;
-        fillTexture(texture: Texture, x: number, y: number, width: number, height: number, type: string, offset: Point, other: any): void;
-        setShader(shader: Shader): void;
-        setFilters(value: Array<any>): void;
-        drawTexture(tex: Texture, x: number, y: number, width: number, height: number, tx: number, ty: number): void;
-        addTextureVb(invb: Array<any>, x: number, y: number): void;
-        willDrawTexture(tex: Texture, alpha: number): number;
-        drawTextures(tex: Texture, pos: Array<any>, tx: number, ty: number): void;
-        _drawText(tex: Texture, x: number, y: number, width: number, height: number, m: Matrix, tx: number, ty: number, dx: number, dy: number): void;
-        drawTextureWithTransform(tex: Texture, x: number, y: number, width: number, height: number, transform: Matrix, tx: number, ty: number, alpha: number): void;
-        fillQuadrangle(tex: Texture, x: number, y: number, point4: Array<any>, m: Matrix): void;
-        drawTexture2(x: number, y: number, pivotX: number, pivotY: number, transform: Matrix, alpha: number, blendMode: string, args: Array<any>): void;
-        drawCanvas(canvas: HTMLCanvas, x: number, y: number, width: number, height: number): void;
-        drawTarget(scope: any, x: number, y: number, width: number, height: number, m: Matrix, proName: string, shaderValue: Value2D, uv?: Array<any>, blend?: number): void;
-        transform(a: number, b: number, c: number, d: number, tx: number, ty: number): void;
-        setTransformByMatrix(value: Matrix): void;
-        transformByMatrix(value: Matrix): void;
-        rotate(angle: number): void;
-        scale(scaleX: number, scaleY: number): void;
-        clipRect(x: number, y: number, width: number, height: number): void;
-        setIBVB(x: number, y: number, ib: IndexBuffer2D, vb: VertexBuffer2D, numElement: number, mat: Matrix, shader: Shader, shaderValues: Value2D, startIndex?: number, offset?: number, type?: number): void;
-        addRenderObject(o: ISubmit): void;
-        fillTrangles(tex: Texture, x: number, y: number, points: Array<any>, m: Matrix): void;
-        submitElement(start: number, end: number): void;
-        finish(): void;
-        flush(): number;
-        setPathId(id: number): void;
-        movePath(x: number, y: number): void;
-        beginPath(): void;
-        closePath(): void;
-        fill(isConvexPolygon?: boolean): void;
-        stroke(): void;
-        line(fromX: number, fromY: number, toX: number, toY: number, lineWidth: number, mat: Matrix): void;
-        moveTo(x: number, y: number, b?: boolean): void;
-        lineTo(x: number, y: number, b?: boolean): void;
-        drawCurves(x: number, y: number, args: Array<any>): void;
-        arcTo(x1: number, y1: number, x2: number, y2: number, r: number): void;
-        arc(cx: number, cy: number, r: number, startAngle: number, endAngle: number, counterclockwise?: boolean, b?: boolean): void;
-        quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
-        rect(x: number, y: number, width: number, height: number): void;
-        strokeRect(x: number, y: number, width: number, height: number, parameterLineWidth: number): void;
-        clip(): void;
-        /**
-         * 画多边形(用)
-         * @param	x
-         * @param	y
-         * @param	points
-         */
-        drawPoly(x: number, y: number, points: Array<any>, color: number, lineWidth: number, boderColor: number, isConvexPolygon?: boolean): void;
-        /*******************************************end矢量绘制***************************************************/
-        drawParticle(x: number, y: number, pt: any): void;
-    }
-    class ContextParams {
-        static DEFAULT: ContextParams;
-        lineWidth: number;
-        path: any;
-        textAlign: string;
-        textBaseline: string;
-        font: FontInContext;
-        clear(): void;
-        make(): ContextParams;
-    }
-}
+
+
+
+
+
 declare module laya.webgl.display {
     import Graphics = laya.display.Graphics;
     import Shader = laya.webgl.shader.Shader;
@@ -29045,61 +28832,8 @@ declare module laya.webgl.resource {
         clearAtlasSource(): void;
     }
 }
-declare module laya.webgl.resource {
-    import IDispose = laya.resource.IDispose;
-    import Texture = laya.resource.Texture;
-    class RenderTarget2D extends Texture implements IDispose {
-        static TYPE2D: number;
-        static TYPE3D: number;
-        _destroy: boolean;
-        readonly surfaceFormat: number;
-        readonly surfaceType: number;
-        readonly depthStencilFormat: number;
-        readonly mipMap: boolean;
-        readonly minFifter: number;
-        readonly magFifter: number;
-        /**返回RenderTarget的Texture*/
-        readonly source: any;
-        /**
-         * @param width
-         * @param height
-         * @param mimMap
-         * @param surfaceFormat RGB ,R,RGBA......
-         * @param surfaceType    WebGLContext.UNSIGNED_BYTE  数据类型
-         * @param depthFormat WebGLContext.DEPTH_COMPONENT16 数据类型等
-         * **/
-        constructor(width: number, height: number, surfaceFormat?: number, surfaceType?: number, depthStencilFormat?: number, mipMap?: boolean, repeat?: boolean, minFifter?: number, magFifter?: number);
-        getType(): number;
-        getTexture(): Texture;
-        size(w: number, h: number): void;
-        release(): void;
-        recycle(): void;
-        // static create(w: number, h: number, surfaceFormat?: number, surfaceType?: number, depthStencilFormat?: number, mipMap?: boolean, repeat?: boolean, minFifter?: number, magFifter?: number): RenderTarget2D;
-        start(): RenderTarget2D;
-        clear(r?: number, g?: number, b?: number, a?: number): void;
-        end(): void;
-        getData(x: number, y: number, width: number, height: number): Uint8Array;
-        /**彻底清理资源,注意会强制解锁清理*/
-        destroy(foreDiposeTexture?: boolean): void;
-        dispose(): void;
-    }
-}
-declare module laya.webgl.resource {
-    import Sprite = laya.display.Sprite;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    class RenderTargetMAX {
-        target: RenderTarget2D;
-        repaint: boolean;
-        _width: number;
-        _height: number;
-        constructor();
-        setSP(sp: Sprite): void;
-        size(w: number, h: number): void;
-        flush(context: WebGLContext2D): void;
-        drawTo(context: WebGLContext2D, x: number, y: number, width: number, height: number): void;
-        destroy(): void;
-    }
-}
+
+
 declare module laya.webgl.resource {
     import Bitmap = laya.resource.Bitmap;
     import Context = laya.resource.Context;
@@ -29760,61 +29494,8 @@ declare module laya.webgl.submit {
         releaseRender(): void;
     }
 }
-declare module laya.webgl.submit {
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    import Value2D = laya.webgl.shader.d2.value.Value2D;
-    import ISubmit = laya.webgl.submit.ISubmit;
-    import IndexBuffer2D = laya.webgl.utils.IndexBuffer2D;
-    import VertexBuffer2D = laya.webgl.utils.VertexBuffer2D;
-    class Submit implements ISubmit {
-        static TYPE_2D: number;
-        static TYPE_CANVAS: number;
-        static TYPE_CMDSETRT: number;
-        static TYPE_CUSTOM: number;
-        static TYPE_BLURRT: number;
-        static TYPE_CMDDESTORYPRERT: number;
-        static TYPE_DISABLESTENCIL: number;
-        static TYPE_OTHERIBVB: number;
-        static TYPE_PRIMITIVE: number;
-        static TYPE_RT: number;
-        static TYPE_BLUR_RT: number;
-        static TYPE_TARGET: number;
-        static TYPE_CHANGE_VALUE: number;
-        static TYPE_SHAPE: number;
-        static TYPE_TEXTURE: number;
-        static TYPE_FILLTEXTURE: number;
-        static RENDERBASE: Submit;
-        protected _selfVb: VertexBuffer2D;
-        protected _ib: IndexBuffer2D;
-        protected _blendFn: Function;
-        _renderType: number;
-        _vb: VertexBuffer2D;
-        _startIdx: number;
-        _numEle: number;
-        shaderValue: Value2D;
-        static __init__(): void;
-        constructor(renderType?: number);
-        releaseRender(): void;
-        getRenderType(): number;
-        renderSubmit(): number;
-        static createSubmit(context: WebGLContext2D, ib: IndexBuffer2D, vb: VertexBuffer2D, pos: number, sv: Value2D): Submit;
-        static createShape(ctx: WebGLContext2D, ib: IndexBuffer2D, vb: VertexBuffer2D, numEle: number, offset: number, sv: Value2D): Submit;
-    }
-}
-declare module laya.webgl.submit {
-    import Matrix = laya.maths.Matrix;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    class SubmitCanvas extends Submit {
-        static create(ctx_src: WebGLContext2D, alpha: number, filters: Array<any>): SubmitCanvas;
-        _matrix: Matrix;
-        _ctx_src: WebGLContext2D;
-        _matrix4: Array<any>;
-        constructor();
-        renderSubmit(): number;
-        releaseRender(): void;
-        getRenderType(): number;
-    }
-}
+
+
 declare module laya.webgl.submit {
     import ISubmit = laya.webgl.submit.ISubmit;
     class SubmitCMD implements ISubmit {
@@ -29839,111 +29520,11 @@ declare module laya.webgl.submit {
         static create(): SubmitCMDScope;
     }
 }
-declare module laya.webgl.submit {
-    import Matrix = laya.maths.Matrix;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    import Shader = laya.webgl.shader.Shader;
-    import Value2D = laya.webgl.shader.d2.value.Value2D;
-    import ISubmit = laya.webgl.submit.ISubmit;
-    import IndexBuffer2D = laya.webgl.utils.IndexBuffer2D;
-    import VertexBuffer2D = laya.webgl.utils.VertexBuffer2D;
-    class SubmitOtherIBVB implements ISubmit {
-        static create(context: WebGLContext2D, vb: VertexBuffer2D, ib: IndexBuffer2D, numElement: number, shader: Shader, shaderValue: Value2D, startIndex: number, offset: number, type?: number): SubmitOtherIBVB;
-        protected offset: number;
-        protected _vb: VertexBuffer2D;
-        protected _ib: IndexBuffer2D;
-        protected _blendFn: Function;
-        _mat: Matrix;
-        _shader: Shader;
-        _shaderValue: Value2D;
-        _numEle: number;
-        startIndex: number;
-        constructor();
-        releaseRender(): void;
-        getRenderType(): number;
-        renderSubmit(): number;
-    }
-}
-declare module laya.webgl.submit {
-    import Rectangle = laya.maths.Rectangle;
-    import ISubmit = laya.webgl.submit.ISubmit;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    class SubmitScissor implements ISubmit {
-        static _cache: Array<any>;
-        clipRect: Rectangle;
-        screenRect: Rectangle;
-        submitIndex: number;
-        submitLength: number;
-        context: WebGLContext2D;
-        constructor();
-        renderSubmit(): number;
-        getRenderType(): number;
-        releaseRender(): void;
-        static create(context: WebGLContext2D): SubmitScissor;
-    }
-}
-declare module laya.webgl.submit {
-    import Matrix = laya.maths.Matrix;
-    import Rectangle = laya.maths.Rectangle;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    class SubmitStencil implements ISubmit {
-        static _cache: Array<any>;
-        step: number;
-        blendMode: string;
-        constructor();
-        renderSubmit(): number;
-        getRenderType(): number;
-        releaseRender(): void;
-        static restore(context: WebGLContext2D, clip: Rectangle, m: Matrix, _x: number, _y: number): void;
-        static restore2(context: WebGLContext2D, submit: Submit): void;
-        static create(step: number): SubmitStencil;
-    }
-}
-declare module laya.webgl.submit {
-    import ISubmit = laya.webgl.submit.ISubmit;
-    import IndexBuffer2D = laya.webgl.utils.IndexBuffer2D;
-    import VertexBuffer2D = laya.webgl.utils.VertexBuffer2D;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    import Value2D = laya.webgl.shader.d2.value.Value2D;
-    class SubmitTarget implements ISubmit {
-        protected _renderType: number;
-        protected _vb: VertexBuffer2D;
-        protected _ib: IndexBuffer2D;
-        _startIdx: number;
-        _numEle: number;
-        shaderValue: Value2D;
-        blendType: number;
-        proName: string;
-        scope: SubmitCMDScope;
-        constructor();
-        static _cache: Array<any>;
-        renderSubmit(): number;
-        blend(): void;
-        getRenderType(): number;
-        releaseRender(): void;
-        static create(context: WebGLContext2D, ib: IndexBuffer2D, vb: VertexBuffer2D, pos: number, sv: Value2D, proName: string): SubmitTarget;
-    }
-}
-declare module laya.webgl.submit {
-    import Texture = laya.resource.Texture;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    import Value2D = laya.webgl.shader.d2.value.Value2D;
-    import IndexBuffer2D = laya.webgl.utils.IndexBuffer2D;
-    import VertexBuffer2D = laya.webgl.utils.VertexBuffer2D;
-    class SubmitTexture extends Submit {
-        protected _texs: Array<any>;
-        protected _texsID: Array<any>;
-        protected _vbPos: Array<any>;
-        _preIsSameTextureShader: boolean;
-        _isSameTexture: boolean;
-        constructor(renderType?: number);
-        releaseRender(): void;
-        addTexture(tex: Texture, vbpos: number): void;
-        checkTexture(): void;
-        renderSubmit(): number;
-        static create(context: WebGLContext2D, ib: IndexBuffer2D, vb: VertexBuffer2D, pos: number, sv: Value2D): SubmitTexture;
-    }
-}
+
+
+
+
+
 declare module laya.webgl.text {
     /**
      * ...特殊的字符，如泰文，必须重新实现这个类
@@ -29956,35 +29537,7 @@ declare module laya.webgl.text {
         length(): number;
     }
 }
-declare module laya.webgl.text {
-    import Matrix = laya.maths.Matrix;
-    import WebGLContext2D = laya.webgl.canvas.WebGLContext2D;
-    import WebGLCharImage = laya.webgl.resource.WebGLCharImage;
-    class DrawText {
-        static _drawValue: CharValue;
-        static d: Array<any>;
-        static __init__(): void;
-        /**
-         * 项目层根据当前的语言特性，设置自己的分词器，如泰语需要特殊的处理
-         * @param	charseg
-         */
-        static customCharSeg(charseg: ICharSegment): void;
-        static getChar(char: string, id: number, drawValue: CharValue): WebGLCharImage;
-        static drawText(ctx: WebGLContext2D, txt: any, words: Array<any>, curMat: Matrix, font: FontInContext, textAlign: string, fillColor: string, borderColor: string, lineWidth: number, x: number, y: number, underLine?: number): void;
-    }
-    class CharValue {
-        txtID: number;
-        font: any;
-        fillColor: string;
-        borderColor: string;
-        lineWidth: number;
-        scaleX: number;
-        scaleY: number;
-        underLine: number;
-        value(font: any, fillColor: string, borderColor: string, lineWidth: number, scaleX: number, scaleY: number, underLine: number): CharValue;
-        static clear(): void;
-    }
-}
+
 declare module laya.webgl.text {
     class FontInContext {
         static EMPTY: FontInContext;
@@ -30038,6 +29591,12 @@ declare module laya.webgl.utils {
         protected _uploadSize: number;
         readonly bufferLength: number;
         byteLength: number;
+        /**
+         * 在当前的基础上需要多大空间，单位是byte
+         * @param	sz
+         * @return  增加大小之前的写位置。单位是byte
+         */
+        needSize(sz: number): number;
         constructor();
         protected _bufferData(): void;
         protected _bufferSubData(offset?: number, dataStart?: number, dataLength?: number): void;
@@ -30046,6 +29605,12 @@ declare module laya.webgl.utils {
         _bind_subUpload(offset?: number, dataStart?: number, dataLength?: number): boolean;
         _resizeBuffer(nsz: number, copy: boolean): Buffer2D;
         append(data: any): void;
+        /**
+         * 附加Uint16Array的数据。数据长度是len。byte的话要*2
+         * @param	data
+         * @param	len
+         */
+        appendU16Array(data: Uint16Array, len: number): void;
         appendEx(data: any, type: any): void;
         appendEx2(data: any, type: any, dataLen: number, perDataLen?: number): void;
         getBuffer(): ArrayBuffer;
@@ -30119,6 +29684,76 @@ declare module laya.webgl.utils {
     }
 }
 declare module laya.webgl.utils {
+    /**
+     * Mesh2d只是保存数据。描述attribute用的。本身不具有渲染功能。
+     */
+    class Mesh2D {
+        _stride: number;
+        vertNum: number;
+        indexNum: number;
+        protected _applied: boolean;
+        protected _vb: VertexBuffer2D;
+        protected _ib: IndexBuffer2D;
+        protected _quadNum: number;
+        canReuse: boolean;
+        /**
+         *
+         * @param	stride
+         * @param	vballoc  vb预分配的大小。主要是用来提高效率。防止不断的resizebfufer
+         * @param	iballoc
+         */
+        constructor(stride: number, vballoc: number, iballoc: number);
+        /**
+         * 重新创建一个mesh。复用这个对象的vertex结构，ib对象和attribinfo对象
+         */
+        cloneWithNewVB(): Mesh2D;
+        /**
+         * 创建一个mesh，使用当前对象的vertex结构。vb和ib自己提供。
+         * @return
+         */
+        cloneWithNewVBIB(): Mesh2D;
+        /**
+         * 获得一个可以写的vb对象
+         */
+        getVBW(): VertexBuffer2D;
+        /**
+         * 获得一个只读vb
+         */
+        getVBR(): VertexBuffer2D;
+        getIBR(): IndexBuffer2D;
+        /**
+         * 获得一个可写的ib
+         */
+        getIBW(): IndexBuffer2D;
+        /**
+         * 直接创建一个固定的ib。按照固定四边形的索引。
+         * @param	var QuadNum
+         */
+        createQuadIB(QuadNum: number): void;
+        /**
+         * 设置mesh的属性。每3个一组，对应的location分别是0,1,2...
+         * 含义是：type,size,offset
+         * 不允许多流。因此stride是固定的，offset只是在一个vertex之内。
+         * @param	attribs
+         */
+        setAttributes(attribs: Array<any>): void;
+        getEleNum(): number;
+        /**
+         * 子类实现。用来把自己放到对应的回收池中，以便复用。
+         */
+        releaseMesh(): void;
+        /**
+         * 释放资源。
+         */
+        destroy(): void;
+        /**
+         * 清理vb数据
+         */
+        clearVB(): void;
+    }
+}
+
+declare module laya.webgl.utils {
     import Sprite = laya.display.Sprite;
     import RenderContext = laya.renders.RenderContext;
     import RenderSprite = laya.renders.RenderSprite;
@@ -30135,31 +29770,7 @@ declare module laya.webgl.utils {
         _transform(sprite: Sprite, context: RenderContext, x: number, y: number): void;
     }
 }
-declare module laya.webgl.utils {
-    import Matrix = laya.maths.Matrix;
-    import Rectangle = laya.maths.Rectangle;
-    import RenderTarget2D = laya.webgl.resource.RenderTarget2D;
-    import ShaderDefines2D = laya.webgl.shader.d2.ShaderDefines2D;
-    class RenderState2D {
-        static _MAXSIZE: number;
-        static EMPTYMAT4_ARRAY: Array<any>;
-        static TEMPMAT4_ARRAY: Array<any>;
-        static worldMatrix4: Array<any>;
-        static worldMatrix: Matrix;
-        static worldAlpha: number;
-        static worldScissorTest: boolean;
-        static worldFilters: Array<any>;
-        static worldShaderDefines: ShaderDefines2D;
-        static worldClipRect: Rectangle;
-        static curRenderTarget: RenderTarget2D;
-        static width: number;
-        static height: number;
-        static getMatrArray(): Array<any>;
-        static mat2MatArray(mat: Matrix, matArray: Array<any>): Array<any>;
-        static restoreTempArray(): void;
-        static clear(): void;
-    }
-}
+
 declare module laya.webgl.utils {
     import Shader = laya.webgl.shader.Shader;
     /**
@@ -30719,568 +30330,6 @@ declare module laya.webgl {
     }
 }
 
-declare module PathFinding.core {
-    /**
-     * ...
-     * @author dongketao
-     */
-    class DiagonalMovement {
-        static Always: number;
-        static Never: number;
-        static IfAtMostOneObstacle: number;
-        static OnlyWhenNoObstacles: number;
-        constructor();
-    }
-}
-declare module PathFinding.core {
-    /**
-     * ...
-     * @author dongketao
-     */
-    class Grid {
-        width: number;
-        height: number;
-        nodes: Array<any>;
-        /**
-         * The Grid class, which serves as the encapsulation of the layout of the nodes.
-         * @constructor
-         * @param
-         * @param
-         * @param
-         *     representing the walkable status of the nodes(0 or false for walkable).
-         *     If the matrix is not supplied, all the nodes will be walkable.  */
-        constructor(width_or_matrix: any, height: number, matrix?: Array<any>);
-        /**
-         * 从图片生成AStar图。
-         * @param texture AStar图资源。
-         */
-        static createGridFromAStarMap(texture: any): Grid;
-        /**
-         * Build and return the nodes.
-         * @private
-         * @param
-         * @param
-         * @param
-         *     the walkable status of the nodes.
-         * @see Grid
-         */
-        _buildNodes(width: number, height: number, matrix?: Array<any>): Array<any>;
-        getNodeAt(x: number, y: number): Node;
-        /**
-         * Determine whether the node at the given position is walkable.
-         * (Also returns false if the position is outside the grid.)
-         * @param
-         * @param
-         * @return
-         */
-        isWalkableAt(x: number, y: number): boolean;
-        /**
-         * Determine whether the position is inside the grid.
-         * XXX: `grid.isInside(x, y)` is wierd to read.
-         * It should be `(x, y) is inside grid`, but I failed to find a better
-         * name for this method.
-         * @param
-         * @param
-         * @return
-         */
-        isInside(x: number, y: number): boolean;
-        /**
-         * Set whether the node on the given position is walkable.
-         * NOTE: throws exception if the coordinate is not inside the grid.
-         * @param
-         * @param
-         * @param
-         */
-        setWalkableAt(x: number, y: number, walkable: boolean): void;
-        /**
-         * Get the neighbors of the given node.
-         *
-         *     offsets      diagonalOffsets:
-         *  +---+---+---+    +---+---+---+
-         *  |   | 0 |   |    | 0 |   | 1 |
-         *  +---+---+---+    +---+---+---+
-         *  | 3 |   | 1 |    |   |   |   |
-         *  +---+---+---+    +---+---+---+
-         *  |   | 2 |   |    | 3 |   | 2 |
-         *  +---+---+---+    +---+---+---+
-         *
-         *  When allowDiagonal is true, if offsets[i] is valid, then
-         *  diagonalOffsets[i] and
-         *  diagonalOffsets[(i + 1) % 4] is valid.
-         * @param
-         * @param
-         */
-        getNeighbors(node: Node, diagonalMovement: number): Array<any>;
-        /**
-         * Get a clone of this grid.
-         * @return
-         */
-        clone(): Grid;
-        reset(): void;
-    }
-}
-declare module PathFinding.core {
-    /**
-     * ...
-     * @author dongketao
-     */
-    class Heuristic {
-        constructor();
-        static manhattan(dx: number, dy: number): number;
-        static euclidean(dx: number, dy: number): number;
-        static octile(dx: number, dy: number): number;
-        static chebyshev(dx: number, dy: number): number;
-    }
-}
-declare module PathFinding.core {
-    /**
-     * ...
-     * @author dongketao
-     */
-    class Node {
-        x: number;
-        y: number;
-        g: number;
-        f: number;
-        h: number;
-        by: number;
-        parent: Node;
-        opened: any;
-        closed: any;
-        tested: any;
-        retainCount: any;
-        walkable: boolean;
-        constructor(x: number, y: number, walkable?: boolean);
-    }
-}
-declare module PathFinding.core {
-    /**
-     * ...
-     * @author dongketao
-     */
-    class Util {
-        constructor();
-        static backtrace(node: Node): Array<any>;
-        static biBacktrace(nodeA: Node, nodeB: Node): Array<any>;
-        static pathLength(path: Array<any>): number;
-        static interpolate(x0: number, y0: number, x1: number, y1: number): Array<any>;
-        static expandPath(path: Array<any>): Array<any>;
-        static smoothenPath(grid: Grid, path: Array<any>): Array<any>;
-        static compressPath(path: Array<any>): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    import Grid = PathFinding.core.Grid;
-    /**
-     * ...
-     * @author dongketao
-     */
-    class AStarFinder {
-        allowDiagonal: boolean;
-        dontCrossCorners: boolean;
-        heuristic: Function;
-        weight: number;
-        diagonalMovement: number;
-        /**
-         * A* path-finder. Based upon https://github.com/bgrins/javascript-astar
-         * @constructor
-         * @param {Object} opt
-         * @param {boolean} opt.allowDiagonal Whether diagonal movement is allowed.
-         *     Deprecated, use diagonalMovement instead.
-         * @param {boolean} opt.dontCrossCorners Disallow diagonal movement touching
-         *     block corners. Deprecated, use diagonalMovement instead.
-         * @param {DiagonalMovement} opt.diagonalMovement Allowed diagonal movement.
-         * @param {function} opt.heuristic Heuristic function to estimate the distance
-         *     (defaults to manhattan).
-         * @param {number} opt.weight Weight to apply to the heuristic to allow for
-         *     suboptimal paths, in order to speed up the search.
-         */
-        constructor(opt: any);
-        /**
-         * Find and return the the path.
-         * @return
-         *     end positions.
-         */
-        findPath(startX: number, startY: number, endX: number, endY: number, grid: Grid): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    /**
-     * ...
-     * @author ...
-     */
-    class BestFirstFinder extends AStarFinder {
-        constructor(opt: any);
-    }
-}
-declare module PathFinding.finders {
-    import Grid = PathFinding.core.Grid;
-    /**
-     * ...
-     * @author ...
-     */
-    class BiAStarFinder {
-        allowDiagonal: boolean;
-        dontCrossCorners: boolean;
-        diagonalMovement: number;
-        heuristic: Function;
-        weight: number;
-        /**
-         * A* path-finder.
-         * based upon https://github.com/bgrins/javascript-astar
-         * @constructor
-         * @param {Object} opt
-         * @param {boolean} opt.allowDiagonal Whether diagonal movement is allowed.
-         *     Deprecated, use diagonalMovement instead.
-         * @param {boolean} opt.dontCrossCorners Disallow diagonal movement touching
-         *     block corners. Deprecated, use diagonalMovement instead.
-         * @param {DiagonalMovement} opt.diagonalMovement Allowed diagonal movement.
-         * @param {function} opt.heuristic Heuristic function to estimate the distance
-         *     (defaults to manhattan).
-         * @param {number} opt.weight Weight to apply to the heuristic to allow for
-         *     suboptimal paths, in order to speed up the search.
-         */
-        constructor(opt: any);
-        /**
-         * Find and return the the path.
-         * @return
-         *     end positions.
-         */
-        findPath(startX: number, startY: number, endX: number, endY: number, grid: Grid): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    /**
-     * ...
-     * @author ...
-     */
-    class BiBestFirstFinder extends BiAStarFinder {
-        constructor(opt: any);
-    }
-}
-declare module PathFinding.finders {
-    import Grid = PathFinding.core.Grid;
-    /**
-     * ...
-     * @author dongketao
-     */
-    class BiBreadthFirstFinder {
-        /**
-         * Bi-directional Breadth-First-Search path finder.
-         * @constructor
-         * @param
-         * @param
-         *     Deprecated, use diagonalMovement instead.
-         * @param
-         *     block corners. Deprecated, use diagonalMovement instead.
-         * @param
-         */
-        constructor(opt: any);
-        /**
-         * Find and return the the path.
-         * @return
-         *     end positions.
-         */
-        findPath(startX: number, startY: number, endX: number, endY: number, grid: Grid): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    /**
-     * ...
-     * @author ...
-     */
-    class BiDijkstraFinder extends BiAStarFinder {
-        constructor(opt: any);
-    }
-}
-declare module PathFinding.finders {
-    import Grid = PathFinding.core.Grid;
-    /**
-     * ...
-     * @author dongketao
-     */
-    class BreadthFirstFinder {
-        /**
-         * Breadth-First-Search path finder.
-         * @constructor
-         * @param
-         * @param
-         *     Deprecated, use diagonalMovement instead.
-         * @param
-         *     block corners. Deprecated, use diagonalMovement instead.
-         * @param
-         */
-        constructor(opt: any);
-        /**
-         * Find and return the the path.
-         * @return
-         *     end positions.
-         */
-        findPath(startX: number, startY: number, endX: number, endY: number, grid: Grid): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    /**
-     * ...
-     * @author ...
-     */
-    class DijkstraFinder extends AStarFinder {
-        constructor(opt: any);
-    }
-}
-declare module PathFinding.finders {
-    import Grid = PathFinding.core.Grid;
-    /**
-     * ...
-     * @author dongketao
-     */
-    class IDAStarFinder {
-        /**
-         * Iterative Deeping A Star (IDA*) path-finder.
-         *
-         * Recursion based on:
-         *   http://www.apl.jhu.edu/~hall/AI-Programming/IDA-Star.html
-         *
-         * Path retracing based on:
-         *  V. Nageshwara Rao, Vipin Kumar and K. Ramesh
-         *  "A Parallel Implementation of Iterative-Deeping-A*", January 1987.
-         *  ftp://ftp.cs.utexas.edu/.snapshot/hourly.1/pub/AI-Lab/tech-reports/UT-AI-TR-87-46.pdf
-         *
-         * @author Gerard Meier (www.gerardmeier.com)
-         *
-         * @constructor
-         * @param {Object} opt
-         * @param {boolean} opt.allowDiagonal Whether diagonal movement is allowed.
-         *     Deprecated, use diagonalMovement instead.
-         * @param {boolean} opt.dontCrossCorners Disallow diagonal movement touching
-         *     block corners. Deprecated, use diagonalMovement instead.
-         * @param {DiagonalMovement} opt.diagonalMovement Allowed diagonal movement.
-         * @param {function} opt.heuristic Heuristic function to estimate the distance
-         *     (defaults to manhattan).
-         * @param {number} opt.weight Weight to apply to the heuristic to allow for
-         *     suboptimal paths, in order to speed up the search.
-         * @param {boolean} opt.trackRecursion Whether to track recursion for
-         *     statistical purposes.
-         * @param {number} opt.timeLimit Maximum execution time. Use <= 0 for infinite.
-         */
-        constructor(opt: any);
-        /**
-         * Find and return the the path. When an empty array is returned, either
-         * no path is possible, or the maximum execution time is reached.
-         *
-         * @return
-         *     end positions.
-         */
-        findPath(startX: number, startY: number, endX: number, endY: number, grid: Grid): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    import Node = PathFinding.core.Node;
-    /**
-     * ...
-     * @author ...
-     */
-    class JPFAlwaysMoveDiagonally extends JumpPointFinderBase {
-        constructor(opt: any);
-        /**
-         * Search recursively in the direction (parent -> child), stopping only when a
-         * jump point is found.
-         * @protected
-         * @return
-         *     found, or null if not found
-         */
-        _jump(x: number, y: number, px: number, py: number): Array<any>;
-        /**
-         * Find the neighbors for the given node. If the node has a parent,
-         * prune the neighbors based on the jump point search algorithm, otherwise
-         * return all available neighbors.
-         * @return
-         */
-        _findNeighbors(node: Node): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    import Node = PathFinding.core.Node;
-    /**
-     * ...
-     * @author ...
-     */
-    class JPFMoveDiagonallyIfAtMostOneObstacle extends JumpPointFinderBase {
-        constructor(opt: any);
-        /**
-         * Search recursively in the direction (parent -> child), stopping only when a
-         * jump point is found.
-         * @protected
-         * @return
-         *     found, or null if not found
-         */
-        _jump(x: number, y: number, px: number, py: number): Array<any>;
-        /**
-         * Find the neighbors for the given node. If the node has a parent,
-         * prune the neighbors based on the jump point search algorithm, otherwise
-         * return all available neighbors.
-         * @return
-         */
-        _findNeighbors(node: Node): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    import Node = PathFinding.core.Node;
-    /**
-     * ...
-     * @author ...
-     */
-    class JPFMoveDiagonallyIfNoObstacles extends JumpPointFinderBase {
-        constructor(opt: any);
-        /**
-         * Search recursively in the direction (parent -> child), stopping only when a
-         * jump point is found.
-         * @protected
-         * @return
-         *     found, or null if not found
-         */
-        _jump(x: number, y: number, px: number, py: number): Array<any>;
-        /**
-         * Find the neighbors for the given node. If the node has a parent,
-         * prune the neighbors based on the jump point search algorithm, otherwise
-         * return all available neighbors.
-         * @return
-         */
-        _findNeighbors(node: Node): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    import Node = PathFinding.core.Node;
-    /**
-     * ...
-     * @author ...
-     */
-    class JPFNeverMoveDiagonally extends JumpPointFinderBase {
-        constructor(opt: any);
-        /**
-         * Search recursively in the direction (parent -> child), stopping only when a
-         * jump point is found.
-         * @protected
-         * @return
-         *     found, or null if not found
-         */
-        _jump(x: number, y: number, px: number, py: number): Array<any>;
-        /**
-         * Find the neighbors for the given node. If the node has a parent,
-         * prune the neighbors based on the jump point search algorithm, otherwise
-         * return all available neighbors.
-         * @return
-         */
-        _findNeighbors(node: Node): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    /**
-     * ...
-     * @author ...
-     */
-    class JumpPointFinder {
-        /**
-         * Path finder using the Jump Point Search algorithm
-         * @param {Object} opt
-         * @param {function} opt.heuristic Heuristic function to estimate the distance
-         *     (defaults to manhattan).
-         * @param {DiagonalMovement} opt.diagonalMovement Condition under which diagonal
-         *      movement will be allowed.
-         */
-        constructor(opt: any);
-    }
-}
-declare module PathFinding.finders {
-    import Grid = PathFinding.core.Grid;
-    import Node = PathFinding.core.Node;
-    import Heap = PathFinding.libs.Heap;
-    /**
-     * ...
-     * @author ...
-     */
-    class JumpPointFinderBase {
-        grid: Grid;
-        openList: Heap;
-        startNode: Node;
-        endNode: Node;
-        heuristic: Function;
-        trackJumpRecursion: boolean;
-        /**
-         * Base class for the Jump Point Search algorithm
-         * @param {object} opt
-         * @param {function} opt.heuristic Heuristic function to estimate the distance
-         *     (defaults to manhattan).
-         */
-        constructor(opt: any);
-        /**
-         * Find and return the path.
-         * @return
-         *     end positions.
-         */
-        findPath(startX: number, startY: number, endX: number, endY: number, grid: Grid): any;
-        _jump(x: number, y: number, px: number, py: number): Array<any>;
-        _findNeighbors(node: Node): Array<any>;
-    }
-}
-declare module PathFinding.finders {
-    import Grid = PathFinding.core.Grid;
-    /**
-     * ...
-     * @author dongketao
-     */
-    class TraceFinder {
-        constructor(opt: any);
-        findPath(startX: number, startY: number, endX: number, endY: number, grid: Grid): Array<any>;
-    }
-}
-declare module PathFinding.libs {
-    /**
-     * ...
-     * @author dongketao
-     */
-    class Heap {
-        heapFunction: HeapFunction;
-        cmp: Function;
-        nodes: Array<any>;
-        constructor(cmp?: Function);
-        push(x: any): any;
-        pop(): any;
-        peek(): any;
-        contains(x: any): boolean;
-        replace(x: any): any;
-        pushpop(x: any): any;
-        heapify(): any;
-        updateItem(x: any): any;
-        clear(): any;
-        empty(): boolean;
-        size(): number;
-        clone(): Heap;
-        toArray(): any;
-    }
-}
-declare module PathFinding.libs {
-    /**
-     * ...
-     * @author dongketao
-     */
-    class HeapFunction {
-        constructor();
-        defaultCmp: Function;
-        insort(a: any, x: any, lo?: any, hi?: any, cmp?: any): any;
-        heappush(array: any, item: any, cmp: any): any;
-        heappop(array: any, cmp: any): any;
-        heapreplace(array: any, item: any, cmp: any): any;
-        heappushpop(array: any, item: any, cmp: any): any;
-        heapify(array: any, cmp: any): any;
-        updateItem(array: any, item: any, cmp: any): any;
-        nlargest(array: any, n: number, cmp: any): any;
-        nsmallest(array: any, n: number, cmp: any): any;
-        _siftdown(array: any, startpos: number, pos: number, cmp: any): any;
-        _siftup(array: any, pos: number, cmp: any): any;
-    }
-}
-
 declare module Laya {
     class AnimationContent extends laya.ani.AnimationContent {
     }
@@ -31548,6 +30597,8 @@ declare module Laya {
     }
     class Sprite3D extends laya.d3.core.Sprite3D {
     }
+    class Color extends laya.d3.core.trail.module.Color {
+    }
     class Gradient extends laya.d3.core.trail.module.Gradient {
     }
     class GradientAlphaKey extends laya.d3.core.trail.module.GradientAlphaKey {
@@ -31785,6 +30836,8 @@ declare module Laya {
     class Shader3D extends laya.d3.shader.Shader3D {
     }
     class ShaderCompile3D extends laya.d3.shader.ShaderCompile3D {
+    }
+    class ShaderDefines extends laya.d3.shader.ShaderDefines {
     }
     class ShaderInit3D extends laya.d3.shader.ShaderInit3D {
     }
@@ -32178,8 +31231,6 @@ declare module Laya {
     }
     class ClassUtils extends laya.utils.ClassUtils {
     }
-    class Color extends laya.utils.Color {
-    }
     class Dictionary extends laya.utils.Dictionary {
     }
     class Dragging extends laya.utils.Dragging {
@@ -32238,30 +31289,12 @@ declare module Laya {
     }
     class Path extends laya.webgl.canvas.Path {
     }
-    interface ISaveData extends laya.webgl.canvas.save.ISaveData {
-    }
-    class SaveBase extends laya.webgl.canvas.save.SaveBase {
-    }
-    class SaveClipRect extends laya.webgl.canvas.save.SaveClipRect {
-    }
-    class SaveClipRectStencil extends laya.webgl.canvas.save.SaveClipRectStencil {
-    }
-    class SaveMark extends laya.webgl.canvas.save.SaveMark {
-    }
-    class SaveTransform extends laya.webgl.canvas.save.SaveTransform {
-    }
-    class SaveTranslate extends laya.webgl.canvas.save.SaveTranslate {
-    }
-    class WebGLContext2D extends laya.webgl.canvas.WebGLContext2D {
-    }
+
     class GraphicsGL extends laya.webgl.display.GraphicsGL {
     }
     interface IMergeAtlasBitmap extends laya.webgl.resource.IMergeAtlasBitmap {
     }
-    class RenderTarget2D extends laya.webgl.resource.RenderTarget2D {
-    }
-    class RenderTargetMAX extends laya.webgl.resource.RenderTargetMAX {
-    }
+
     class WebGLCanvas extends laya.webgl.resource.WebGLCanvas {
     }
     class WebGLCharImage extends laya.webgl.resource.WebGLCharImage {
@@ -32302,8 +31335,6 @@ declare module Laya {
     }
     class Shader extends laya.webgl.shader.Shader {
     }
-    class ShaderDefines extends laya.webgl.shader.ShaderDefines {
-    }
     class ShaderValue extends laya.webgl.shader.ShaderValue {
     }
     class BasePoly extends laya.webgl.shapes.BasePoly {
@@ -32328,28 +31359,15 @@ declare module Laya {
     }
     interface ISubmit extends laya.webgl.submit.ISubmit {
     }
-    class Submit extends laya.webgl.submit.Submit {
-    }
-    class SubmitCanvas extends laya.webgl.submit.SubmitCanvas {
-    }
+
     class SubmitCMD extends laya.webgl.submit.SubmitCMD {
     }
     class SubmitCMDScope extends laya.webgl.submit.SubmitCMDScope {
     }
-    class SubmitOtherIBVB extends laya.webgl.submit.SubmitOtherIBVB {
-    }
-    class SubmitScissor extends laya.webgl.submit.SubmitScissor {
-    }
-    class SubmitStencil extends laya.webgl.submit.SubmitStencil {
-    }
-    class SubmitTarget extends laya.webgl.submit.SubmitTarget {
-    }
-    class SubmitTexture extends laya.webgl.submit.SubmitTexture {
-    }
+
     class CharSegment extends laya.webgl.text.CharSegment {
     }
-    class DrawText extends laya.webgl.text.DrawText {
-    }
+
     class FontInContext extends laya.webgl.text.FontInContext {
     }
     interface ICharSegment extends laya.webgl.text.ICharSegment {
@@ -32366,10 +31384,12 @@ declare module Laya {
     }
     class MatirxArray extends laya.webgl.utils.MatirxArray {
     }
+    class Mesh2D extends laya.webgl.utils.Mesh2D {
+    }
+
     class RenderSprite3D extends laya.webgl.utils.RenderSprite3D {
     }
-    class RenderState2D extends laya.webgl.utils.RenderState2D {
-    }
+
     class ShaderCompile extends laya.webgl.utils.ShaderCompile {
     }
     class VertexBuffer2D extends laya.webgl.utils.VertexBuffer2D {
@@ -32378,57 +31398,14 @@ declare module Laya {
     }
     class WebGLContext extends laya.webgl.WebGLContext {
     }
-    class DiagonalMovement extends PathFinding.core.DiagonalMovement {
-    }
-    class Grid extends PathFinding.core.Grid {
-    }
-    class Heuristic extends PathFinding.core.Heuristic {
-    }
+
     // class Node extends PathFinding.core.Node {
     // }
-    class Util extends PathFinding.core.Util {
-    }
-    class AStarFinder extends PathFinding.finders.AStarFinder {
-    }
-    class BestFirstFinder extends PathFinding.finders.BestFirstFinder {
-    }
-    class BiAStarFinder extends PathFinding.finders.BiAStarFinder {
-    }
-    class BiBestFirstFinder extends PathFinding.finders.BiBestFirstFinder {
-    }
-    class BiBreadthFirstFinder extends PathFinding.finders.BiBreadthFirstFinder {
-    }
-    class BiDijkstraFinder extends PathFinding.finders.BiDijkstraFinder {
-    }
-    class BreadthFirstFinder extends PathFinding.finders.BreadthFirstFinder {
-    }
-    class DijkstraFinder extends PathFinding.finders.DijkstraFinder {
-    }
-    class IDAStarFinder extends PathFinding.finders.IDAStarFinder {
-    }
-    class JPFAlwaysMoveDiagonally extends PathFinding.finders.JPFAlwaysMoveDiagonally {
-    }
-    class JPFMoveDiagonallyIfAtMostOneObstacle extends PathFinding.finders.JPFMoveDiagonallyIfAtMostOneObstacle {
-    }
-    class JPFMoveDiagonallyIfNoObstacles extends PathFinding.finders.JPFMoveDiagonallyIfNoObstacles {
-    }
-    class JPFNeverMoveDiagonally extends PathFinding.finders.JPFNeverMoveDiagonally {
-    }
-    class JumpPointFinder extends PathFinding.finders.JumpPointFinder {
-    }
-    class JumpPointFinderBase extends PathFinding.finders.JumpPointFinderBase {
-    }
-    class TraceFinder extends PathFinding.finders.TraceFinder {
-    }
-    class Heap extends PathFinding.libs.Heap {
-    }
-    class HeapFunction extends PathFinding.libs.HeapFunction {
-    }
+
+
     class DebugPanel extends laya.debug.DebugPanel {
     }
     class DebugTool extends laya.debug.DebugTool {
-    }
-    class MiniAdpter extends laya.wx.mini.MiniAdpter {
     }
 }
 declare class Laya3D {
@@ -32437,7 +31414,7 @@ declare class Laya3D {
      * @param    width  3D画布宽度。
      * @param    height 3D画布高度。
      */
-    static  init(width:number, height:number, antialias?:boolean, alpha?:boolean, premultipliedAlpha?:boolean):void
+    static init(width: number, height: number, antialias?: boolean, alpha?: boolean, premultipliedAlpha?: boolean): void
 }
 /**
  * <code>Laya</code> 是全局对象的引用入口集。
@@ -32472,7 +31449,7 @@ declare class Laya {
      */
     static alertGlobalError: boolean;
 
-    static class(functionRef:Function, fullQulifiedName:String, superClass:Function, miniName:String):void;
+    static class(functionRef: Function, fullQulifiedName: String, superClass: Function, miniName: String): void;
 
     /**
      * JS中为目标定义getter/setter。
@@ -32488,7 +31465,7 @@ declare class Laya {
      * @param getter
      * @param setter
      */
-    static getset(isStatic:Boolean, target:any, name:String, getter:Function, setter:Function):void;
+    static getset(isStatic: Boolean, target: any, name: String, getter: Function, setter: Function): void;
 
     /**
      * JS中实现接口。如： 使Myclass实现接口a.interface: Laya.imps(Myclass.prototype, { a.interface: true});
@@ -32496,74 +31473,74 @@ declare class Laya {
      * @param prototypeChain
      * @param superInterfaces
      */
-    static imps(prototypeChain:any, superInterfaces:Object):void;
+    static imps(prototypeChain: any, superInterfaces: Object): void;
 
     /**
      * JS中定义接口。如 Laya.interface("a.b.myinterface", null); Laya.interface("a.b.myInterface2", BaseInterface);
      * @param name
      * @param superClass
      */
-    static interface(name:String, superClass:Function):void;
+    static interface(name: String, superClass: Function): void;
 
-    static superSet(clas:any,o:any,prop:any,value:any):void;
+    static superSet(clas: any, o: any, prop: any, value: any): any;
 
-    static superGet(clas:any,o:any,prop:any):void;
+    static superGet(clas: any, o: any, prop: any): any;
 }
 /**全局配置*/
 declare class UIConfig {
-  /**是否开启触摸滚动（针对滚动条）*/
-        public static   touchScrollEnable:boolean;
-        /**是否开启滑轮滚动（针对滚动条）*/
-        public static   mouseWheelEnable:boolean ;
-        /**是否显示滚动条按钮*/
-        public static   showButtons:boolean;
-        /**弹出框背景颜色*/
-        public static   popupBgColor:string;
-        /**弹出框背景透明度*/
-        public static   popupBgAlpha:number;
-        /**模式窗口点击边缘，是否关闭窗口，默认是关闭的*/
-        public static   closeDialogOnSide:boolean;
+    /**是否开启触摸滚动（针对滚动条）*/
+    public static touchScrollEnable: boolean;
+    /**是否开启滑轮滚动（针对滚动条）*/
+    public static mouseWheelEnable: boolean;
+    /**是否显示滚动条按钮*/
+    public static showButtons: boolean;
+    /**弹出框背景颜色*/
+    public static popupBgColor: string;
+    /**弹出框背景透明度*/
+    public static popupBgAlpha: number;
+    /**模式窗口点击边缘，是否关闭窗口，默认是关闭的*/
+    public static closeDialogOnSide: boolean;
 }
 /**
  *  Config 用于配置一些全局参数。
  */
 declare class Config {
-        /**
-         * WebGL模式下文本缓存最大数量。
-         */
-        public static  WebGLTextCacheCount:number;
-        /**
-         * 表示是否使用了大图合集功能。
-         */
-        public static  atlasEnable:boolean;
-        /**
-         * 是否显示画布图边框，用于调试。
-         */
-        public static  showCanvasMark:boolean;
-        /**
-         * 动画 Animation 的默认播放时间间隔，单位为毫秒。
-         */
-        public static  animationInterval:number;
-        /**
-         * 设置是否抗锯齿，只对2D(WebGL)、3D有效。
-         */
-        public static  isAntialias:boolean;
-        /**
-         * 设置画布是否透明，只对2D(WebGL)、3D有效。
-         */
-        public static  isAlpha:boolean;
-        /**
-         * 设置画布是否预乘，只对2D(WebGL)、3D有效。
-         */
-        public static  premultipliedAlpha:boolean;
-        /**
-         * 设置画布的模板缓冲，只对2D(WebGL)、3D有效。
-         */
-        public static  isStencil:boolean;
-        /**
-         * 是否强制WebGL同步刷新。
-         */
-        public static  preserveDrawingBuffer:boolean;
+    /**
+     * WebGL模式下文本缓存最大数量。
+     */
+    public static WebGLTextCacheCount: number;
+    /**
+     * 表示是否使用了大图合集功能。
+     */
+    public static atlasEnable: boolean;
+    /**
+     * 是否显示画布图边框，用于调试。
+     */
+    public static showCanvasMark: boolean;
+    /**
+     * 动画 Animation 的默认播放时间间隔，单位为毫秒。
+     */
+    public static animationInterval: number;
+    /**
+     * 设置是否抗锯齿，只对2D(WebGL)、3D有效。
+     */
+    public static isAntialias: boolean;
+    /**
+     * 设置画布是否透明，只对2D(WebGL)、3D有效。
+     */
+    public static isAlpha: boolean;
+    /**
+     * 设置画布是否预乘，只对2D(WebGL)、3D有效。
+     */
+    public static premultipliedAlpha: boolean;
+    /**
+     * 设置画布的模板缓冲，只对2D(WebGL)、3D有效。
+     */
+    public static isStencil: boolean;
+    /**
+     * 是否强制WebGL同步刷新。
+     */
+    public static preserveDrawingBuffer: boolean;
 }
 declare module laya.debug {
     /**
@@ -32577,79 +31554,91 @@ declare module laya.debug {
         static init(cacheAnalyseEnable?: boolean, loaderAnalyseEnable?: boolean, createAnalyseEnable?: boolean, renderAnalyseEnable?: boolean): void;
     }
 }
-declare module laya.debug{
-    class DebugPanel{
+declare module laya.debug {
+    class DebugPanel {
         /**
          * 初始化调试面板
          * @param underGame 是否在游戏下方显示，true:将改变原游戏的大小,false:直接覆盖在游戏上方
          * @param bgColor 调试面板背景颜色
          *
          */
-         static init(underGame?:boolean,bgColor?:string):void;
-    }
-}
-declare module laya.wx.mini {
-    class MiniAdpter {
-        /**
-         * 初始化回调
-         * @param isPosMsg 是否需要在主域中自动将加载的文本数据自动传递到子域，默认 false
-         * @param isSon 是否是子域，默认为false
-         */
-        static init(isPosMsg?:boolean,isSon?:boolean): void;
-        /**是否自动缓存下载的图片跟声音文件，默认为true**/
-        static autoCacheFile: boolean;
-    }
-}
-declare module laya.bd.mini {
-    class BMiniAdapter {
-        /**
-         * 初始化回调
-         * @param isPosMsg 是否需要在主域中自动将加载的文本数据自动传递到子域，默认 false
-         * @param isSon 是否是子域，默认为false
-         */
-        static init(isPosMsg?:boolean,isSon?:boolean): void;
-        /**是否自动缓存下载的图片跟声音文件，默认为true**/
-        static autoCacheFile: boolean;
-    }
-}
-declare module laya.vq.mini {
-    class MiniAdapter {
-        /**
-         * 初始化回调
-         * @param isPosMsg 是否需要在主域中自动将加载的文本数据自动传递到子域，默认 false
-         * @param isSon 是否是子域，默认为false
-         */
-        static init(isPosMsg?:boolean,isSon?:boolean): void;
-        static autoCacheFile: boolean;
-        static minClearSize: number;
-    }
-}
-declare module laya.quickgame.mini {
-    class MiniAdpter {
-        /**
-         * 初始化回调
-         * @param isPosMsg 是否需要在主域中自动将加载的文本数据自动传递到子域，默认 false
-         * @param isSon 是否是子域，默认为false
-         */
-        static init(isPosMsg?:boolean,isSon?:boolean): void;
-        static autoCacheFile: boolean;
-        static minClearSize: number;
-    }
-}
-declare module laya.mi.mini {
-    class KGMiniAdapter {
-        /**
-         * 初始化回调
-         * @param isPosMsg 是否需要在主域中自动将加载的文本数据自动传递到子域，默认 false
-         * @param isSon 是否是子域，默认为false
-         */
-        static init(isPosMsg?: boolean, isSon?: boolean): void;
-        static autoCacheFile: boolean;
-        static minClearSize: number;
-
+        static init(underGame?: boolean, bgColor?: string): void;
     }
 }
 
-declare class ByteBuffer{}
+/**
+ * ETH区块链相关
+ */
+declare class LayaGCS {
+	/*
+		ETH的功能类实例，封装了bip协议以及账户签名算法
+	*/
+    static ETHBip: Object;
+
+	/*
+		得到当前已经unlock的ETH账户，如果是undefined说明玩家还没登陆
+	*/
+    static get_current_account(): string;
+	/*
+		初始化LayaGCS，需要传入Laya.stage根节点以及网络network
+		 //初始化LayaGCS
+   		 LayaGCS.initlize({
+			laya_stage_node:laya.stage,     //Laya Air根节点
+			network:0                       //ETH区块链网络（0位测试网络Rinkedby , 1为正式网络MainNet)
+			auto_load_last_account:false    //自动读取上次登入的账户
+		})
+	*/
+    static initlize(t: Object): void;
+	/*
+		是否已经初始化完成
+	*/
+    static initlized: boolean;
+	/*
+		当前使用的区块链网络，0为Rinkedby , 1是正式网络
+	*/
+    static network: number;
+	/*
+		sdk资源回调完成
+	*/
+    static onSDKResouceLoaded(): void;
+	/*
+		设置初始化完成回调
+	*/
+    static set_inited_callback(t: Function): void;
+	/*
+		打开登陆界面（如果已经登录，进入账户界面)
+	*/
+    static show_login_ui(t: any): void;
+	/*
+		已经设定的Laya.stage
+	*/
+    static target_stage: Object;
+	/*
+
+		这是一个完整的web3实例。LayaGCS的web3有一些改动。
+
+		由于LayaOne提供了一个全节点，所以游戏前端无需同步区块数据
+
+		为了更好的游戏体验，LayaGCS.web3不再提供同步方法，例如
+
+		var balance = web3.eth.getBalance(LayaGCS.get_default_account()); //同步的写法，LayaGCS不再支持
+
+		支持的写法
+
+		1.
+		co(function*(){
+			var balance = yield function(done){
+			web3.eth.getBalance(LayaGCS.get_default_account(),done)
+			}
+
+			console.log('账户余额为',balalnce)
+		})
+
+		2. web3.eth.getBalance(LayaGCS.get_default_account,function(err,result){
+			console.log(result)
+		})
 
 
+	*/
+    static web3: Object;
+}

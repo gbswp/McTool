@@ -1,0 +1,18 @@
+namespace app.{moduleName} {
+    export class {className} extends {parentName} {#hasEvents}implements I{parentName}{/hasEvents} {
+        {#isDlg}static NAME = "{className}";
+        name = {className}.NAME;{/isDlg}
+        protected _modelEvents: any[] = [];
+
+        onCreate() {
+            super.onCreate();
+        }
+
+        {#hasEvents}
+        {eventStr}
+        {/hasEvents}
+    }
+    {#isDlg}
+    View.regViewRuntime({className}.NAME, {className})
+    {/isDlg}
+}

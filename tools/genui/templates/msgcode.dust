@@ -1,0 +1,5 @@
+ const enum MsgId {
+      {#datas}
+      /**{.desc} */
+      {.key}={.value}{@sep},{~n}{/sep}{/datas}
+}

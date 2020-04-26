@@ -5,9 +5,10 @@
 	var Animation=laya.display.Animation,Browser=laya.utils.Browser,ClassUtils=laya.utils.ClassUtils,ColorFilter=laya.filters.ColorFilter;
 	var Ease=laya.utils.Ease,Event=laya.events.Event,EventDispatcher=laya.events.EventDispatcher,Font=laya.display.css.Font;
 	var FrameAnimation=laya.display.FrameAnimation,Graphics=laya.display.Graphics,Handler=laya.utils.Handler;
-	var Input=laya.display.Input,Loader=laya.net.Loader,Node=laya.display.Node,Point=laya.maths.Point,Rectangle=laya.maths.Rectangle;
-	var Render=laya.renders.Render,Sprite=laya.display.Sprite,Text=laya.display.Text,Texture=laya.resource.Texture;
-	var Tween=laya.utils.Tween,Utils=laya.utils.Utils,WeakObject=laya.utils.WeakObject;
+	var HttpRequest=laya.net.HttpRequest,Input=laya.display.Input,Loader=laya.net.Loader,LocalStorage=laya.net.LocalStorage;
+	var Node=laya.display.Node,Point=laya.maths.Point,Rectangle=laya.maths.Rectangle,Render=laya.renders.Render;
+	var Sprite=laya.display.Sprite,Stage=laya.display.Stage,Text=laya.display.Text,Texture=laya.resource.Texture;
+	var TimeLine=laya.utils.TimeLine,Tween=laya.utils.Tween,Utils=laya.utils.Utils,WeakObject=laya.utils.WeakObject;
 Laya.interface('laya.ui.IItem');
 Laya.interface('laya.ui.IRender');
 Laya.interface('laya.ui.ISelect');
@@ -205,7 +206,8 @@ var AutoBitmap=(function(_super){
 		var sw=source.sourceWidth;
 		var sh=source.sourceHeight;
 		if (!sizeGrid || (sw===width && sh===height)){
-			this.cleanByTexture(source,this._offset ? this._offset[0] :0,this._offset ? this._offset[1] :0,width,height);
+			this.clear();
+			this.drawTexture(source,this._offset ? this._offset[0] :0,this._offset ? this._offset[1] :0,width,height);
 			}else {
 			source.$_GID || (source.$_GID=Utils.getGID());
 			var key=source.$_GID+"."+width+"."+height+"."+sizeGrid.join(".");
@@ -345,7 +347,7 @@ var AutoBitmap=(function(_super){
 		tex.$_GID || (tex.$_GID=Utils.getGID())
 		var key=tex.$_GID+"."+x+"."+y+"."+width+"."+height;
 		var texture=WeakObject.I.get(key);
-		if (!texture||!texture.source){
+		if (!texture || !texture.source){
 			texture=Texture.createFromTexture(tex,x,y,width,height);
 			WeakObject.I.set(key,texture);
 		}
@@ -461,6 +463,10 @@ var Component=(function(_super){
 	*/
 	__proto.changeSize=function(){
 		this.event(/*laya.events.Event.RESIZE*/"resize");
+		if (this._layout.enable){
+			this.resetLayoutX();
+			this.resetLayoutY();
+		}
 	}
 
 	/**
@@ -571,6 +577,11 @@ var Component=(function(_super){
 	*/
 	__proto.onMouseOut=function(e){
 		Laya.stage.event(/*laya.ui.UIEvent.HIDE_TIP*/"hidetip",this._toolTip);
+	}
+
+	__proto._childChanged=function(child){
+		this.callLater(this.changeSize);
+		_super.prototype._childChanged.call(this,child);
 	}
 
 	/**
@@ -1066,6 +1077,216 @@ var DialogManager=(function(_super){
 
 	return DialogManager;
 })(Sprite)
+
+
+/**
+*<code>Image</code> 类是用于表示位图图像或绘制图形的显示对象。
+*Image和Clip组件是唯一支持异步加载的两个组件，比如img.skin="abc/xxx.png"，其他UI组件均不支持异步加载。
+*
+*@example <caption>以下示例代码，创建了一个新的 <code>Image</code> 实例，设置了它的皮肤、位置信息，并添加到舞台上。</caption>
+*package
+*{
+	*import laya.ui.Image;
+	*public class Image_Example
+	*{
+		*public function Image_Example()
+		*{
+			*Laya.init(640,800);//设置游戏画布宽高。
+			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+			*onInit();
+			*}
+		*private function onInit():void
+		*{
+			*var bg:Image=new Image("resource/ui/bg.png");//创建一个 Image 类的实例对象 bg ,并传入它的皮肤。
+			*bg.x=100;//设置 bg 对象的属性 x 的值，用于控制 bg 对象的显示位置。
+			*bg.y=100;//设置 bg 对象的属性 y 的值，用于控制 bg 对象的显示位置。
+			*bg.sizeGrid="40,10,5,10";//设置 bg 对象的网格信息。
+			*bg.width=150;//设置 bg 对象的宽度。
+			*bg.height=250;//设置 bg 对象的高度。
+			*Laya.stage.addChild(bg);//将此 bg 对象添加到显示列表。
+			*var image:Image=new Image("resource/ui/image.png");//创建一个 Image 类的实例对象 image ,并传入它的皮肤。
+			*image.x=100;//设置 image 对象的属性 x 的值，用于控制 image 对象的显示位置。
+			*image.y=100;//设置 image 对象的属性 y 的值，用于控制 image 对象的显示位置。
+			*Laya.stage.addChild(image);//将此 image 对象添加到显示列表。
+			*}
+		*}
+	*}
+*@example
+*Laya.init(640,800);//设置游戏画布宽高
+*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
+*onInit();
+*function onInit(){
+	*var bg=new laya.ui.Image("resource/ui/bg.png");//创建一个 Image 类的实例对象 bg ,并传入它的皮肤。
+	*bg.x=100;//设置 bg 对象的属性 x 的值，用于控制 bg 对象的显示位置。
+	*bg.y=100;//设置 bg 对象的属性 y 的值，用于控制 bg 对象的显示位置。
+	*bg.sizeGrid="40,10,5,10";//设置 bg 对象的网格信息。
+	*bg.width=150;//设置 bg 对象的宽度。
+	*bg.height=250;//设置 bg 对象的高度。
+	*Laya.stage.addChild(bg);//将此 bg 对象添加到显示列表。
+	*var image=new laya.ui.Image("resource/ui/image.png");//创建一个 Image 类的实例对象 image ,并传入它的皮肤。
+	*image.x=100;//设置 image 对象的属性 x 的值，用于控制 image 对象的显示位置。
+	*image.y=100;//设置 image 对象的属性 y 的值，用于控制 image 对象的显示位置。
+	*Laya.stage.addChild(image);//将此 image 对象添加到显示列表。
+	*}
+*@example
+*class Image_Example {
+	*constructor(){
+		*Laya.init(640,800);//设置游戏画布宽高。
+		*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+		*this.onInit();
+		*}
+	*private onInit():void {
+		*var bg:laya.ui.Image=new laya.ui.Image("resource/ui/bg.png");//创建一个 Image 类的实例对象 bg ,并传入它的皮肤。
+		*bg.x=100;//设置 bg 对象的属性 x 的值，用于控制 bg 对象的显示位置。
+		*bg.y=100;//设置 bg 对象的属性 y 的值，用于控制 bg 对象的显示位置。
+		*bg.sizeGrid="40,10,5,10";//设置 bg 对象的网格信息。
+		*bg.width=150;//设置 bg 对象的宽度。
+		*bg.height=250;//设置 bg 对象的高度。
+		*Laya.stage.addChild(bg);//将此 bg 对象添加到显示列表。
+		*var image:laya.ui.Image=new laya.ui.Image("resource/ui/image.png");//创建一个 Image 类的实例对象 image ,并传入它的皮肤。
+		*image.x=100;//设置 image 对象的属性 x 的值，用于控制 image 对象的显示位置。
+		*image.y=100;//设置 image 对象的属性 y 的值，用于控制 image 对象的显示位置。
+		*Laya.stage.addChild(image);//将此 image 对象添加到显示列表。
+		*}
+	*}
+*@see laya.ui.AutoBitmap
+*/
+//class laya.ui.Image extends laya.ui.Component
+var Image=(function(_super){
+	function Image(skin){
+		/**@private */
+		this._bitmap=null;
+		/**@private */
+		this._skin=null;
+		/**@private */
+		this._group=null;
+		Image.__super.call(this);
+		this.skin=skin;
+	}
+
+	__class(Image,'laya.ui.Image',_super);
+	var __proto=Image.prototype;
+	/**@inheritDoc */
+	__proto.destroy=function(destroyChild){
+		(destroyChild===void 0)&& (destroyChild=true);
+		_super.prototype.destroy.call(this,true);
+		this._bitmap && this._bitmap.destroy();
+		this._bitmap=null;
+	}
+
+	/**
+	*销毁对象并释放加载的皮肤资源。
+	*/
+	__proto.dispose=function(){
+		this.destroy(true);
+		Laya.loader.clearRes(this._skin);
+	}
+
+	/**@inheritDoc */
+	__proto.createChildren=function(){
+		this.graphics=this._bitmap=new AutoBitmap();
+		this._bitmap.autoCacheCmd=false;
+	}
+
+	/**
+	*@private
+	*设置皮肤资源。
+	*/
+	__proto.setSource=function(url,img){
+		if (url===this._skin && img){
+			this.source=img
+			this.onCompResize();
+		}
+	}
+
+	/**
+	*@copy laya.ui.AutoBitmap#source
+	*/
+	__getset(0,__proto,'source',function(){
+		return this._bitmap.source;
+		},function(value){
+		if (!this._bitmap)return;
+		this._bitmap.source=value;
+		this.event(/*laya.events.Event.LOADED*/"loaded");
+		this.repaint();
+	});
+
+	/**@inheritDoc */
+	__getset(0,__proto,'dataSource',_super.prototype._$get_dataSource,function(value){
+		this._dataSource=value;
+		if ((typeof value=='string'))this.skin=value;
+		else Laya.superSet(Component,this,'dataSource',value);
+	});
+
+	/**@inheritDoc */
+	__getset(0,__proto,'measureHeight',function(){
+		return this._bitmap.height;
+	});
+
+	/**
+	*<p>对象的皮肤地址，以字符串表示。</p>
+	*<p>如果资源未加载，则先加载资源，加载完成后应用于此对象。</p>
+	*<b>注意：</b>资源加载完成后，会自动缓存至资源库中。
+	*/
+	__getset(0,__proto,'skin',function(){
+		return this._skin;
+		},function(value){
+		if (this._skin !=value){
+			this._skin=value;
+			if (value){
+				var source=Loader.getRes(value);
+				if (source){
+					this.source=source;
+					this.onCompResize();
+				}else Laya.loader.load(this._skin,Handler.create(this,this.setSource,[this._skin]),null,/*laya.net.Loader.IMAGE*/"image",1,true,this._group);
+				}else {
+				this.source=null;
+			}
+		}
+	});
+
+	/**
+	*资源分组。
+	*/
+	__getset(0,__proto,'group',function(){
+		return this._group;
+		},function(value){
+		if (value && this._skin)Loader.setGroup(this._skin,value);
+		this._group=value;
+	});
+
+	/**
+	*<p>当前实例的位图 <code>AutoImage</code> 实例的有效缩放网格数据。</p>
+	*<p>数据格式："上边距,右边距,下边距,左边距,是否重复填充(值为0：不重复填充，1：重复填充)"，以逗号分隔。
+	*<ul><li>例如："4,4,4,4,1"。</li></ul></p>
+	*@see laya.ui.AutoBitmap#sizeGrid
+	*/
+	__getset(0,__proto,'sizeGrid',function(){
+		if (this._bitmap.sizeGrid)return this._bitmap.sizeGrid.join(",");
+		return null;
+		},function(value){
+		this._bitmap.sizeGrid=UIUtils.fillArray(Styles.defaultSizeGrid,value,Number);
+	});
+
+	/**@inheritDoc */
+	__getset(0,__proto,'measureWidth',function(){
+		return this._bitmap.width;
+	});
+
+	/**@inheritDoc */
+	__getset(0,__proto,'width',_super.prototype._$get_width,function(value){
+		Laya.superSet(Component,this,'width',value);
+		this._bitmap.width=value==0 ? 0.0000001 :value;
+	});
+
+	/**@inheritDoc */
+	__getset(0,__proto,'height',_super.prototype._$get_height,function(value){
+		Laya.superSet(Component,this,'height',value);
+		this._bitmap.height=value==0 ? 0.0000001 :value;
+	});
+
+	return Image;
+})(Component)
 
 
 /**
@@ -3596,6 +3817,7 @@ var ScrollBar=(function(_super){
 		return this._mouseWheelEnable;
 		},function(value){
 		this._mouseWheelEnable=value;
+		this.target=this._target;
 	});
 
 	/**
@@ -3982,216 +4204,6 @@ var Slider=(function(_super){
 	['label',function(){return this.label=new Label();}
 	]);
 	return Slider;
-})(Component)
-
-
-/**
-*<code>Image</code> 类是用于表示位图图像或绘制图形的显示对象。
-*Image和Clip组件是唯一支持异步加载的两个组件，比如img.skin="abc/xxx.png"，其他UI组件均不支持异步加载。
-*
-*@example <caption>以下示例代码，创建了一个新的 <code>Image</code> 实例，设置了它的皮肤、位置信息，并添加到舞台上。</caption>
-*package
-*{
-	*import laya.ui.Image;
-	*public class Image_Example
-	*{
-		*public function Image_Example()
-		*{
-			*Laya.init(640,800);//设置游戏画布宽高。
-			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-			*onInit();
-			*}
-		*private function onInit():void
-		*{
-			*var bg:Image=new Image("resource/ui/bg.png");//创建一个 Image 类的实例对象 bg ,并传入它的皮肤。
-			*bg.x=100;//设置 bg 对象的属性 x 的值，用于控制 bg 对象的显示位置。
-			*bg.y=100;//设置 bg 对象的属性 y 的值，用于控制 bg 对象的显示位置。
-			*bg.sizeGrid="40,10,5,10";//设置 bg 对象的网格信息。
-			*bg.width=150;//设置 bg 对象的宽度。
-			*bg.height=250;//设置 bg 对象的高度。
-			*Laya.stage.addChild(bg);//将此 bg 对象添加到显示列表。
-			*var image:Image=new Image("resource/ui/image.png");//创建一个 Image 类的实例对象 image ,并传入它的皮肤。
-			*image.x=100;//设置 image 对象的属性 x 的值，用于控制 image 对象的显示位置。
-			*image.y=100;//设置 image 对象的属性 y 的值，用于控制 image 对象的显示位置。
-			*Laya.stage.addChild(image);//将此 image 对象添加到显示列表。
-			*}
-		*}
-	*}
-*@example
-*Laya.init(640,800);//设置游戏画布宽高
-*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
-*onInit();
-*function onInit(){
-	*var bg=new laya.ui.Image("resource/ui/bg.png");//创建一个 Image 类的实例对象 bg ,并传入它的皮肤。
-	*bg.x=100;//设置 bg 对象的属性 x 的值，用于控制 bg 对象的显示位置。
-	*bg.y=100;//设置 bg 对象的属性 y 的值，用于控制 bg 对象的显示位置。
-	*bg.sizeGrid="40,10,5,10";//设置 bg 对象的网格信息。
-	*bg.width=150;//设置 bg 对象的宽度。
-	*bg.height=250;//设置 bg 对象的高度。
-	*Laya.stage.addChild(bg);//将此 bg 对象添加到显示列表。
-	*var image=new laya.ui.Image("resource/ui/image.png");//创建一个 Image 类的实例对象 image ,并传入它的皮肤。
-	*image.x=100;//设置 image 对象的属性 x 的值，用于控制 image 对象的显示位置。
-	*image.y=100;//设置 image 对象的属性 y 的值，用于控制 image 对象的显示位置。
-	*Laya.stage.addChild(image);//将此 image 对象添加到显示列表。
-	*}
-*@example
-*class Image_Example {
-	*constructor(){
-		*Laya.init(640,800);//设置游戏画布宽高。
-		*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-		*this.onInit();
-		*}
-	*private onInit():void {
-		*var bg:laya.ui.Image=new laya.ui.Image("resource/ui/bg.png");//创建一个 Image 类的实例对象 bg ,并传入它的皮肤。
-		*bg.x=100;//设置 bg 对象的属性 x 的值，用于控制 bg 对象的显示位置。
-		*bg.y=100;//设置 bg 对象的属性 y 的值，用于控制 bg 对象的显示位置。
-		*bg.sizeGrid="40,10,5,10";//设置 bg 对象的网格信息。
-		*bg.width=150;//设置 bg 对象的宽度。
-		*bg.height=250;//设置 bg 对象的高度。
-		*Laya.stage.addChild(bg);//将此 bg 对象添加到显示列表。
-		*var image:laya.ui.Image=new laya.ui.Image("resource/ui/image.png");//创建一个 Image 类的实例对象 image ,并传入它的皮肤。
-		*image.x=100;//设置 image 对象的属性 x 的值，用于控制 image 对象的显示位置。
-		*image.y=100;//设置 image 对象的属性 y 的值，用于控制 image 对象的显示位置。
-		*Laya.stage.addChild(image);//将此 image 对象添加到显示列表。
-		*}
-	*}
-*@see laya.ui.AutoBitmap
-*/
-//class laya.ui.Image extends laya.ui.Component
-var Image=(function(_super){
-	function Image(skin){
-		/**@private */
-		this._bitmap=null;
-		/**@private */
-		this._skin=null;
-		/**@private */
-		this._group=null;
-		Image.__super.call(this);
-		this.skin=skin;
-	}
-
-	__class(Image,'laya.ui.Image',_super);
-	var __proto=Image.prototype;
-	/**@inheritDoc */
-	__proto.destroy=function(destroyChild){
-		(destroyChild===void 0)&& (destroyChild=true);
-		_super.prototype.destroy.call(this,true);
-		this._bitmap && this._bitmap.destroy();
-		this._bitmap=null;
-	}
-
-	/**
-	*销毁对象并释放加载的皮肤资源。
-	*/
-	__proto.dispose=function(){
-		this.destroy(true);
-		Laya.loader.clearRes(this._skin);
-	}
-
-	/**@inheritDoc */
-	__proto.createChildren=function(){
-		this.graphics=this._bitmap=new AutoBitmap();
-		this._bitmap.autoCacheCmd=false;
-	}
-
-	/**
-	*@private
-	*设置皮肤资源。
-	*/
-	__proto.setSource=function(url,img){
-		if (url===this._skin && img){
-			this.source=img
-			this.onCompResize();
-		}
-	}
-
-	/**
-	*@copy laya.ui.AutoBitmap#source
-	*/
-	__getset(0,__proto,'source',function(){
-		return this._bitmap.source;
-		},function(value){
-		if (!this._bitmap)return;
-		this._bitmap.source=value;
-		this.event(/*laya.events.Event.LOADED*/"loaded");
-		this.repaint();
-	});
-
-	/**@inheritDoc */
-	__getset(0,__proto,'dataSource',_super.prototype._$get_dataSource,function(value){
-		this._dataSource=value;
-		if ((typeof value=='string'))this.skin=value;
-		else Laya.superSet(Component,this,'dataSource',value);
-	});
-
-	/**@inheritDoc */
-	__getset(0,__proto,'measureHeight',function(){
-		return this._bitmap.height;
-	});
-
-	/**
-	*<p>对象的皮肤地址，以字符串表示。</p>
-	*<p>如果资源未加载，则先加载资源，加载完成后应用于此对象。</p>
-	*<b>注意：</b>资源加载完成后，会自动缓存至资源库中。
-	*/
-	__getset(0,__proto,'skin',function(){
-		return this._skin;
-		},function(value){
-		if (this._skin !=value){
-			this._skin=value;
-			if (value){
-				var source=Loader.getRes(value);
-				if (source){
-					this.source=source;
-					this.onCompResize();
-				}else Laya.loader.load(this._skin,Handler.create(this,this.setSource,[this._skin]),null,/*laya.net.Loader.IMAGE*/"image",1,true,this._group);
-				}else {
-				this.source=null;
-			}
-		}
-	});
-
-	/**
-	*资源分组。
-	*/
-	__getset(0,__proto,'group',function(){
-		return this._group;
-		},function(value){
-		if (value && this._skin)Loader.setGroup(this._skin,value);
-		this._group=value;
-	});
-
-	/**
-	*<p>当前实例的位图 <code>AutoImage</code> 实例的有效缩放网格数据。</p>
-	*<p>数据格式："上边距,右边距,下边距,左边距,是否重复填充(值为0：不重复填充，1：重复填充)"，以逗号分隔。
-	*<ul><li>例如："4,4,4,4,1"。</li></ul></p>
-	*@see laya.ui.AutoBitmap#sizeGrid
-	*/
-	__getset(0,__proto,'sizeGrid',function(){
-		if (this._bitmap.sizeGrid)return this._bitmap.sizeGrid.join(",");
-		return null;
-		},function(value){
-		this._bitmap.sizeGrid=UIUtils.fillArray(Styles.defaultSizeGrid,value,Number);
-	});
-
-	/**@inheritDoc */
-	__getset(0,__proto,'measureWidth',function(){
-		return this._bitmap.width;
-	});
-
-	/**@inheritDoc */
-	__getset(0,__proto,'width',_super.prototype._$get_width,function(value){
-		Laya.superSet(Component,this,'width',value);
-		this._bitmap.width=value==0 ? 0.0000001 :value;
-	});
-
-	/**@inheritDoc */
-	__getset(0,__proto,'height',_super.prototype._$get_height,function(value){
-		Laya.superSet(Component,this,'height',value);
-		this._bitmap.height=value==0 ? 0.0000001 :value;
-	});
-
-	return Image;
 })(Component)
 
 
@@ -4958,6 +4970,225 @@ var TipManager=(function(_super){
 
 
 /**
+*广告插件
+*@author 小松
+*@date-2018-09-19
+*/
+//class laya.ui.AdvImage extends laya.ui.Image
+var AdvImage=(function(_super){
+	function AdvImage(skin){
+		/**广告列表数据**/
+		this.advsListArr=[];
+		/**资源列表请求地址**/
+		this.resUrl="https://unioncdn.layabox.com/config/iconlist.json";
+		/**广告列表信息**/
+		this._data=[];
+		/**每6分钟重新请求一次新广告列表**/
+		this._resquestTime=360000;
+		/**微信跳转appid**/
+		this._appid=null;
+		/**二维码图片地址**/
+		this._appCodeImgStr=null;
+		/**播放索引**/
+		this._playIndex=0;
+		/**轮播间隔时间**/
+		this._lunboTime=5000;
+		AdvImage.__super.call(this);
+		this._http=new Browser.window.XMLHttpRequest();
+		this.skin=skin;
+		this.init();
+		this.size(120,120);
+	}
+
+	__class(AdvImage,'laya.ui.AdvImage',_super);
+	var __proto=AdvImage.prototype;
+	__proto.init=function(){
+		if(Browser.onMiniGame && this.isSupportJump){
+			Laya.timer.loop(this._resquestTime,this,this.onGetAdvsListData);
+			this.onGetAdvsListData();
+			this.initEvent();
+			}else{
+			this.visible=false;
+		}
+	}
+
+	__proto.initEvent=function(){
+		this.on(/*laya.events.Event.CLICK*/"click",this,this.onAdvsImgClick);
+	}
+
+	__proto.onAdvsImgClick=function(){
+		var currentJumpUrl=this.getCurrentAppidObj();
+		if(currentJumpUrl)
+			this.jumptoGame();
+	}
+
+	__proto.revertAdvsData=function(){
+		if(this.advsListArr[this._playIndex]){
+			this.visible=true;
+			this.skin=this.advsListArr[this._playIndex];
+		}
+	}
+
+	/**
+	*跳转游戏
+	*@param callBack Function 回调参数说明：type 0 跳转成功；1跳转失败；2跳转接口调用成功
+	*/
+	__proto.jumptoGame=function(){
+		var _$this=this;
+		if(!Browser.onMiniGame)
+			return;
+		if(this.isSupportJump){
+			/*__JS__ */wx.navigateToMiniProgram({
+				appId:this._appid,
+				path:"",
+				extraData:"",
+				envVersion:"release",
+				success:function success (){
+					console.log("-------------跳转成功--------------");
+				},
+				fail:function fail (){
+					console.log("-------------跳转失败--------------");
+				},
+				complete:function complete (){
+					console.log("-------------跳转接口调用成功--------------");
+					_$this.updateAdvsInfo();
+				}.bind(this)
+			});
+		}
+	}
+
+	__proto.updateAdvsInfo=function(){
+		this.visible=false;
+		this.onLunbo();
+		Laya.timer.loop(this._lunboTime,this,this.onLunbo);
+	}
+
+	__proto.onLunbo=function(){
+		if(this._playIndex >=this.advsListArr.length-1)
+			this._playIndex=0;
+		else
+		this._playIndex+=1;
+		this.visible=true;
+		this.revertAdvsData();
+	}
+
+	/**获取轮播数据**/
+	__proto.getCurrentAppidObj=function(){
+		return this.advsListArr[this._playIndex];
+	}
+
+	/**
+	*获取广告列表数据信息
+	*/
+	__proto.onGetAdvsListData=function(){
+		var _this=this;
+		var random=this.randRange(10000,1000000);
+		var url=this.resUrl+"?"+random;
+		this._http.open("get",url,true);
+		this._http.setRequestHeader("Content-Type","application/x-www-form-urlencoded")
+		this._http.responseType="text";
+		this._http.onerror=function (e){
+			_this._onError(e);
+		}
+		this._http.onload=function (e){
+			_this._onLoad(e);
+		}
+		this._http.send(null);
+	}
+
+	/**
+	*生成指定范围的随机数
+	*@param minNum 最小值
+	*@param maxNum 最大值
+	*/
+	__proto.randRange=function(minNum,maxNum){
+		return (Math.floor(Math.random()*(maxNum-minNum+1))+minNum);
+	}
+
+	/**
+	*@private
+	*请求出错侦的听处理函数。
+	*@param e 事件对象。
+	*/
+	__proto._onError=function(e){
+		this.error("Request failed Status:"+this._http.status+" text:"+this._http.statusText);
+	}
+
+	/**
+	*@private
+	*请求消息返回的侦听处理函数。
+	*@param e 事件对象。
+	*/
+	__proto._onLoad=function(e){
+		var http=this._http;
+		var status=http.status!==undefined ? http.status :200;
+		if (status===200 || status===204 || status===0){
+			this.complete();
+			}else {
+			this.error("["+http.status+"]"+http.statusText+":"+http.responseURL);
+		}
+	}
+
+	/**
+	*@private
+	*请求错误的处理函数。
+	*@param message 错误信息。
+	*/
+	__proto.error=function(message){
+		this.event(/*laya.events.Event.ERROR*/"error",message);
+	}
+
+	/**
+	*@private
+	*请求成功完成的处理函数。
+	*/
+	__proto.complete=function(){
+		var flag=true;
+		try {
+			this._data=this._http.response || this._http.responseText;
+			this._data=JSON.parse(this._data);
+			this.advsListArr=this._data.list;
+			this._appid=this._data.appid;
+			this._appCodeImgStr=this._data.qrcode;
+			this.updateAdvsInfo();
+			this.revertAdvsData();
+			}catch (e){
+			flag=false;
+			this.error(e.message);
+		}
+	}
+
+	/**
+	*@private
+	*清除当前请求。
+	*/
+	__proto.clear=function(){
+		var http=this._http;
+		http.onerror=http.onabort=http.onprogress=http.onload=null;
+	}
+
+	__proto.destroy=function(destroyChild){
+		(destroyChild===void 0)&& (destroyChild=true);
+		_super.prototype.destroy.call(this,true);
+		Laya.timer.clear(this,this.onLunbo);
+		Laya.timer.clear(this,this.onGetAdvsListData);
+		this.clear();
+	}
+
+	/**当前小游戏环境是否支持游戏跳转功能**/
+	__getset(0,__proto,'isSupportJump',function(){
+		if(Browser.onMiniGame){
+			var isSupperJump=(typeof /*__JS__ */wx.navigateToMiniProgram=='function');
+			return isSupperJump;
+		}
+		return false;
+	});
+
+	return AdvImage;
+})(Image)
+
+
+/**
 *<code>View</code> 是一个视图类。
 *@internal <p><code>View</code></p>
 */
@@ -5348,13 +5579,6 @@ var LayoutBox=(function(_super){
 		child.on(/*laya.events.Event.RESIZE*/"resize",this,this.onResize);
 		this._setItemChanged();
 		return laya.display.Node.prototype.addChildAt.call(this,child,index);
-	}
-
-	/**@inheritDoc */
-	__proto.removeChild=function(child){
-		child.off(/*laya.events.Event.RESIZE*/"resize",this,this.onResize);
-		this._setItemChanged();
-		return laya.display.Node.prototype.removeChild.call(this,child);
 	}
 
 	/**@inheritDoc */
@@ -5795,9 +6019,9 @@ var List=(function(_super){
 		this._createdLine=0;
 		/**@private */
 		this._cellChanged=false;
-		List.__super.call(this);
 		this._cells=[];
 		this._offset=new Point();
+		List.__super.call(this);
 	}
 
 	__class(List,'laya.ui.List',_super);
@@ -6538,6 +6762,97 @@ var List=(function(_super){
 
 
 /**
+*使用 <code>HScrollBar</code> （水平 <code>ScrollBar</code> ）控件，可以在因数据太多而不能在显示区域完全显示时控制显示的数据部分。
+*@example <caption>以下示例代码，创建了一个 <code>HScrollBar</code> 实例。</caption>
+*package
+*{
+	*import laya.ui.HScrollBar;
+	*import laya.utils.Handler;
+	*public class HScrollBar_Example
+	*{
+		*private var hScrollBar:HScrollBar;
+		*public function HScrollBar_Example()
+		*{
+			*Laya.init(640,800);//设置游戏画布宽高。
+			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+			*Laya.loader.load(["resource/ui/hscroll.png","resource/ui/hscroll$bar.png","resource/ui/hscroll$down.png","resource/ui/hscroll$up.png"],Handler.create(this,onLoadComplete));//加载资源。
+			*}
+		*private function onLoadComplete():void
+		*{
+			*hScrollBar=new HScrollBar();//创建一个 HScrollBar 类的实例对象 hScrollBar 。
+			*hScrollBar.skin="resource/ui/hscroll.png";//设置 hScrollBar 的皮肤。
+			*hScrollBar.x=100;//设置 hScrollBar 对象的属性 x 的值，用于控制 hScrollBar 对象的显示位置。
+			*hScrollBar.y=100;//设置 hScrollBar 对象的属性 y 的值，用于控制 hScrollBar 对象的显示位置。
+			*hScrollBar.changeHandler=new Handler(this,onChange);//设置 hScrollBar 的滚动变化处理器。
+			*Laya.stage.addChild(hScrollBar);//将此 hScrollBar 对象添加到显示列表。
+			*}
+		*private function onChange(value:Number):void
+		*{
+			*trace("滚动条的位置： value="+value);
+			*}
+		*}
+	*}
+*@example
+*Laya.init(640,800);//设置游戏画布宽高
+*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
+*var hScrollBar;
+*var res=["resource/ui/hscroll.png","resource/ui/hscroll$bar.png","resource/ui/hscroll$down.png","resource/ui/hscroll$up.png"];
+*Laya.loader.load(res,laya.utils.Handler.create(this,onLoadComplete));//加载资源。
+*function onLoadComplete(){
+	*console.log("资源加载完成！");
+	*hScrollBar=new laya.ui.HScrollBar();//创建一个 HScrollBar 类的实例对象 hScrollBar 。
+	*hScrollBar.skin="resource/ui/hscroll.png";//设置 hScrollBar 的皮肤。
+	*hScrollBar.x=100;//设置 hScrollBar 对象的属性 x 的值，用于控制 hScrollBar 对象的显示位置。
+	*hScrollBar.y=100;//设置 hScrollBar 对象的属性 y 的值，用于控制 hScrollBar 对象的显示位置。
+	*hScrollBar.changeHandler=new laya.utils.Handler(this,onChange);//设置 hScrollBar 的滚动变化处理器。
+	*Laya.stage.addChild(hScrollBar);//将此 hScrollBar 对象添加到显示列表。
+	*}
+*function onChange(value)
+*{
+	*console.log("滚动条的位置： value="+value);
+	*}
+*@example
+*import HScrollBar=laya.ui.HScrollBar;
+*import Handler=laya.utils.Handler;
+*class HScrollBar_Example {
+	*private hScrollBar:HScrollBar;
+	*constructor(){
+		*Laya.init(640,800);//设置游戏画布宽高。
+		*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
+		*Laya.loader.load(["resource/ui/hscroll.png","resource/ui/hscroll$bar.png","resource/ui/hscroll$down.png","resource/ui/hscroll$up.png"],Handler.create(this,this.onLoadComplete));//加载资源。
+		*}
+	*private onLoadComplete():void {
+		*this.hScrollBar=new HScrollBar();//创建一个 HScrollBar 类的实例对象 hScrollBar 。
+		*this.hScrollBar.skin="resource/ui/hscroll.png";//设置 hScrollBar 的皮肤。
+		*this.hScrollBar.x=100;//设置 hScrollBar 对象的属性 x 的值，用于控制 hScrollBar 对象的显示位置。
+		*this.hScrollBar.y=100;//设置 hScrollBar 对象的属性 y 的值，用于控制 hScrollBar 对象的显示位置。
+		*this.hScrollBar.changeHandler=new Handler(this,this.onChange);//设置 hScrollBar 的滚动变化处理器。
+		*Laya.stage.addChild(this.hScrollBar);//将此 hScrollBar 对象添加到显示列表。
+		*}
+	*private onChange(value:number):void {
+		*console.log("滚动条的位置： value="+value);
+		*}
+	*}
+*/
+//class laya.ui.HScrollBar extends laya.ui.ScrollBar
+var HScrollBar=(function(_super){
+	function HScrollBar(){
+		HScrollBar.__super.call(this);;
+	}
+
+	__class(HScrollBar,'laya.ui.HScrollBar',_super);
+	var __proto=HScrollBar.prototype;
+	/**@inheritDoc */
+	__proto.initialize=function(){
+		_super.prototype.initialize.call(this);
+		this.slider.isVertical=false;
+	}
+
+	return HScrollBar;
+})(ScrollBar)
+
+
+/**
 *<code>Panel</code> 是一个面板容器类。
 */
 //class laya.ui.Panel extends laya.ui.Box
@@ -6619,9 +6934,7 @@ var Panel=(function(_super){
 	__proto.removeChildren=function(beginIndex,endIndex){
 		(beginIndex===void 0)&& (beginIndex=0);
 		(endIndex===void 0)&& (endIndex=0x7fffffff);
-		for (var i=this._content.numChildren-1;i >-1;i--){
-			this._content.removeChildAt(i);
-		}
+		this._content.removeChildren(beginIndex,endIndex);
 		this._setScrollChanged();
 		return this;
 	}
@@ -6858,97 +7171,6 @@ var Panel=(function(_super){
 
 
 /**
-*使用 <code>HScrollBar</code> （水平 <code>ScrollBar</code> ）控件，可以在因数据太多而不能在显示区域完全显示时控制显示的数据部分。
-*@example <caption>以下示例代码，创建了一个 <code>HScrollBar</code> 实例。</caption>
-*package
-*{
-	*import laya.ui.HScrollBar;
-	*import laya.utils.Handler;
-	*public class HScrollBar_Example
-	*{
-		*private var hScrollBar:HScrollBar;
-		*public function HScrollBar_Example()
-		*{
-			*Laya.init(640,800);//设置游戏画布宽高。
-			*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-			*Laya.loader.load(["resource/ui/hscroll.png","resource/ui/hscroll$bar.png","resource/ui/hscroll$down.png","resource/ui/hscroll$up.png"],Handler.create(this,onLoadComplete));//加载资源。
-			*}
-		*private function onLoadComplete():void
-		*{
-			*hScrollBar=new HScrollBar();//创建一个 HScrollBar 类的实例对象 hScrollBar 。
-			*hScrollBar.skin="resource/ui/hscroll.png";//设置 hScrollBar 的皮肤。
-			*hScrollBar.x=100;//设置 hScrollBar 对象的属性 x 的值，用于控制 hScrollBar 对象的显示位置。
-			*hScrollBar.y=100;//设置 hScrollBar 对象的属性 y 的值，用于控制 hScrollBar 对象的显示位置。
-			*hScrollBar.changeHandler=new Handler(this,onChange);//设置 hScrollBar 的滚动变化处理器。
-			*Laya.stage.addChild(hScrollBar);//将此 hScrollBar 对象添加到显示列表。
-			*}
-		*private function onChange(value:Number):void
-		*{
-			*trace("滚动条的位置： value="+value);
-			*}
-		*}
-	*}
-*@example
-*Laya.init(640,800);//设置游戏画布宽高
-*Laya.stage.bgColor="#efefef";//设置画布的背景颜色
-*var hScrollBar;
-*var res=["resource/ui/hscroll.png","resource/ui/hscroll$bar.png","resource/ui/hscroll$down.png","resource/ui/hscroll$up.png"];
-*Laya.loader.load(res,laya.utils.Handler.create(this,onLoadComplete));//加载资源。
-*function onLoadComplete(){
-	*console.log("资源加载完成！");
-	*hScrollBar=new laya.ui.HScrollBar();//创建一个 HScrollBar 类的实例对象 hScrollBar 。
-	*hScrollBar.skin="resource/ui/hscroll.png";//设置 hScrollBar 的皮肤。
-	*hScrollBar.x=100;//设置 hScrollBar 对象的属性 x 的值，用于控制 hScrollBar 对象的显示位置。
-	*hScrollBar.y=100;//设置 hScrollBar 对象的属性 y 的值，用于控制 hScrollBar 对象的显示位置。
-	*hScrollBar.changeHandler=new laya.utils.Handler(this,onChange);//设置 hScrollBar 的滚动变化处理器。
-	*Laya.stage.addChild(hScrollBar);//将此 hScrollBar 对象添加到显示列表。
-	*}
-*function onChange(value)
-*{
-	*console.log("滚动条的位置： value="+value);
-	*}
-*@example
-*import HScrollBar=laya.ui.HScrollBar;
-*import Handler=laya.utils.Handler;
-*class HScrollBar_Example {
-	*private hScrollBar:HScrollBar;
-	*constructor(){
-		*Laya.init(640,800);//设置游戏画布宽高。
-		*Laya.stage.bgColor="#efefef";//设置画布的背景颜色。
-		*Laya.loader.load(["resource/ui/hscroll.png","resource/ui/hscroll$bar.png","resource/ui/hscroll$down.png","resource/ui/hscroll$up.png"],Handler.create(this,this.onLoadComplete));//加载资源。
-		*}
-	*private onLoadComplete():void {
-		*this.hScrollBar=new HScrollBar();//创建一个 HScrollBar 类的实例对象 hScrollBar 。
-		*this.hScrollBar.skin="resource/ui/hscroll.png";//设置 hScrollBar 的皮肤。
-		*this.hScrollBar.x=100;//设置 hScrollBar 对象的属性 x 的值，用于控制 hScrollBar 对象的显示位置。
-		*this.hScrollBar.y=100;//设置 hScrollBar 对象的属性 y 的值，用于控制 hScrollBar 对象的显示位置。
-		*this.hScrollBar.changeHandler=new Handler(this,this.onChange);//设置 hScrollBar 的滚动变化处理器。
-		*Laya.stage.addChild(this.hScrollBar);//将此 hScrollBar 对象添加到显示列表。
-		*}
-	*private onChange(value:number):void {
-		*console.log("滚动条的位置： value="+value);
-		*}
-	*}
-*/
-//class laya.ui.HScrollBar extends laya.ui.ScrollBar
-var HScrollBar=(function(_super){
-	function HScrollBar(){
-		HScrollBar.__super.call(this);;
-	}
-
-	__class(HScrollBar,'laya.ui.HScrollBar',_super);
-	var __proto=HScrollBar.prototype;
-	/**@inheritDoc */
-	__proto.initialize=function(){
-		_super.prototype.initialize.call(this);
-		this.slider.isVertical=false;
-	}
-
-	return HScrollBar;
-})(ScrollBar)
-
-
-/**
 *使用 <code>HSlider</code> 控件，用户可以通过在滑块轨道的终点之间移动滑块来选择值。
 *<p> <code>HSlider</code> 控件采用水平方向。滑块轨道从左向右扩展，而标签位于轨道的顶部或底部。</p>
 *
@@ -7051,6 +7273,67 @@ var HSlider=(function(_super){
 	__class(HSlider,'laya.ui.HSlider',_super);
 	return HSlider;
 })(Slider)
+
+
+/**
+*<code>Radio</code> 控件使用户可在一组互相排斥的选择中做出一种选择。
+*用户一次只能选择 <code>Radio</code> 组中的一个成员。选择未选中的组成员将取消选择该组中当前所选的 <code>Radio</code> 控件。
+*@see laya.ui.RadioGroup
+*/
+//class laya.ui.Radio extends laya.ui.Button
+var Radio=(function(_super){
+	function Radio(skin,label){
+		/**@private */
+		this._value=null;
+		(label===void 0)&& (label="");
+		Radio.__super.call(this,skin,label);
+	}
+
+	__class(Radio,'laya.ui.Radio',_super);
+	var __proto=Radio.prototype;
+	/**@inheritDoc */
+	__proto.destroy=function(destroyChild){
+		(destroyChild===void 0)&& (destroyChild=true);
+		_super.prototype.destroy.call(this,destroyChild);
+		this._value=null;
+	}
+
+	/**@inheritDoc */
+	__proto.preinitialize=function(){
+		laya.ui.Component.prototype.preinitialize.call(this);
+		this.toggle=false;
+		this._autoSize=false;
+	}
+
+	/**@inheritDoc */
+	__proto.initialize=function(){
+		_super.prototype.initialize.call(this);
+		this.createText();
+		this._text.align="left";
+		this._text.valign="top";
+		this._text.width=0;
+		this.on(/*laya.events.Event.CLICK*/"click",this,this.onClick);
+	}
+
+	/**
+	*@private
+	*对象的<code>Event.CLICK</code>事件侦听处理函数。
+	*/
+	__proto.onClick=function(e){
+		this.selected=true;
+	}
+
+	/**
+	*获取或设置 <code>Radio</code> 关联的可选用户定义值。
+	*/
+	__getset(0,__proto,'value',function(){
+		return this._value !=null ? this._value :this.label;
+		},function(obj){
+		this._value=obj;
+	});
+
+	return Radio;
+})(Button)
 
 
 /**
@@ -7491,67 +7774,6 @@ var UIGroup=(function(_super){
 
 	return UIGroup;
 })(Box)
-
-
-/**
-*<code>Radio</code> 控件使用户可在一组互相排斥的选择中做出一种选择。
-*用户一次只能选择 <code>Radio</code> 组中的一个成员。选择未选中的组成员将取消选择该组中当前所选的 <code>Radio</code> 控件。
-*@see laya.ui.RadioGroup
-*/
-//class laya.ui.Radio extends laya.ui.Button
-var Radio=(function(_super){
-	function Radio(skin,label){
-		/**@private */
-		this._value=null;
-		(label===void 0)&& (label="");
-		Radio.__super.call(this,skin,label);
-	}
-
-	__class(Radio,'laya.ui.Radio',_super);
-	var __proto=Radio.prototype;
-	/**@inheritDoc */
-	__proto.destroy=function(destroyChild){
-		(destroyChild===void 0)&& (destroyChild=true);
-		_super.prototype.destroy.call(this,destroyChild);
-		this._value=null;
-	}
-
-	/**@inheritDoc */
-	__proto.preinitialize=function(){
-		laya.ui.Component.prototype.preinitialize.call(this);
-		this.toggle=false;
-		this._autoSize=false;
-	}
-
-	/**@inheritDoc */
-	__proto.initialize=function(){
-		_super.prototype.initialize.call(this);
-		this.createText();
-		this._text.align="left";
-		this._text.valign="top";
-		this._text.width=0;
-		this.on(/*laya.events.Event.CLICK*/"click",this,this.onClick);
-	}
-
-	/**
-	*@private
-	*对象的<code>Event.CLICK</code>事件侦听处理函数。
-	*/
-	__proto.onClick=function(e){
-		this.selected=true;
-	}
-
-	/**
-	*获取或设置 <code>Radio</code> 关联的可选用户定义值。
-	*/
-	__getset(0,__proto,'value',function(){
-		return this._value !=null ? this._value :this.label;
-		},function(obj){
-		this._value=obj;
-	});
-
-	return Radio;
-})(Button)
 
 
 /**
@@ -9204,6 +9426,922 @@ var HBox=(function(_super){
 
 
 /**
+*游戏中心插件
+*@author xiaosong
+*@date 2018-12-26
+*/
+//class laya.ui.MoreGame extends laya.ui.View
+var MoreGame=(function(_super){
+	var GameBox,GameItem;
+	function MoreGame(type){
+		/**是否停止缓动，默认晃动**/
+		this.gameStopHD=false;
+		/**icon动画**/
+		this.iconImgTl=null;
+		/**iconImage**/
+		this._iconImage=null;
+		/**更多游戏容器**/
+		this._moreBox=null;
+		/**游戏内盒子容器**/
+		this._gameBox=null;
+		/**屏幕方向,默认0 横屏，1竖屏**/
+		this.screenType=0;
+		/**更多游戏配置数据**/
+		this._moreGameDataUrl="https://abc.layabox.com/public/more/gamelist2.json";
+		/**图片尺寸设置信息**/
+		this._iconImageObj=null;
+		/**图标点击回调**/
+		this.clickCallBack=null;
+		/**关闭盒子回调**/
+		this.closeCallBack=null;
+		/**是否在显示中**/
+		this.isShow=false;
+		/**系统信息**/
+		this.dinfo=null;
+		/**统计数据地址**/
+		this.ErrorUrlHttps="https://elastic.layabox.com/";
+		/**统计类型**/
+		this.tongjiType="bdm";
+		(type===void 0)&& (type=0);
+		MoreGame.__super.call(this);
+		this.screenType=type;
+		this.init();
+	}
+
+	__class(MoreGame,'laya.ui.MoreGame',_super);
+	var __proto=MoreGame.prototype;
+	/**
+	*获取字符串时间戳，例如:2018-7-6
+	*@param _timestamp
+	*@return
+	*
+	*/
+	__proto.getLocalDateString=function(_timestamp){
+		(_timestamp===void 0)&& (_timestamp=0);
+		var timeStr=this.getDateByTimestamp(_timestamp).toLocaleDateString();
+		if(Browser.onLimixiu || Browser.onMiniGame){
+			var date=new Date();
+			timeStr=MoreGame.toLocaleDateString(date.getTime());
+		};
+		var reg=new RegExp("/","g");
+		timeStr=timeStr.replace(reg,"-");
+		return timeStr;
+	}
+
+	__proto.getDateByTimestamp=function(_timestamp){
+		(_timestamp===void 0)&& (_timestamp=0);
+		if (!_timestamp || _timestamp=="")return /*__JS__ */new Date();
+		return /*__JS__ */new Date(_timestamp);
+	}
+
+	/**
+	*发送统计信息
+	*@param etype 统计数据类型
+	*@param errorInfo 报错信息
+	*@param pro 统计扩展数据
+	*/
+	__proto.reportError=function(etype,errorInfo,pro){
+		(errorInfo===void 0)&& (errorInfo="");
+		pro=pro || {};
+		var now=/*__JS__ */Date.now();
+		var date=new Date(now+0);
+		pro.date=date.toLocaleString();
+		pro.etype=etype;
+		if (etype !="error"){
+			if (etype !="statistics"){
+				etype="statistics";
+			}
+		}
+		pro.version="V0.0.1";
+		pro.gameId=10100;
+		pro.dinfo=this.dinfo;
+		pro.channel=-1000;
+		pro.msg=errorInfo;
+		pro["@timestamp"]=/*__JS__ */date.toISOString();
+		pro.user=this.getUserId();
+		pro.openid=this.getOpenId();
+		var rdate=MoreGame.getDay(date);
+		pro.rdate=rdate;
+		pro.day=date.getDate()+"";
+		pro.hour=date.getHours()+"";
+		pro.minute=date.getMinutes()+"";
+		pro.gameurl=/*__JS__ */document.baseURI;
+		pro.regTime=0;
+		if (etype=="error"){
+			this.sendLog(pro,this.tongjiType+"error-"+rdate.substring(0,6)+"/"+etype+"/",etype);
+			}else{
+			this.sendLog(pro,this.tongjiType+"-"+rdate.substring(0,6)+"/"+etype+"/",etype);
+		}
+	}
+
+	/**获取用户userid**/
+	__proto.getUserId=function(){
+		var userid=parseInt(LocalStorage.getItem("layauserid")+"")||-1;
+		if(userid==-1){
+			userid=this.randRange(0,1000000000);
+			LocalStorage.setItem("layauserid",userid+"");
+		}
+		return userid;
+	}
+
+	/**获取用户的openid**/
+	__proto.getOpenId=function(){
+		var str="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+		var openId=LocalStorage.getItem("openid");
+		if(openId==null || openId==""){
+			openId="";
+			for(var i=0,sz=32;i<sz;i++){
+				var random=this.randRange(0,62);
+				openId+=str.charAt(random);
+			}
+			LocalStorage.setItem("openid",openId);
+		}
+		return openId;
+	}
+
+	__proto.sendLog=function(pro,path,btype){
+		var _$this=this;
+		var htt=new HttpRequest();
+		htt.on(/*laya.events.Event.ERROR*/"error",this,function(p,bt,e){
+			if (e && e.indexOf("[404]")!=-1){
+				var htt1=new HttpRequest();
+				htt1.send(_$this.ErrorUrlHttps+"garbage/"+bt+"/",JSON.stringify(p),"post","text",["Content-Type","application/json"]);
+			}
+		},[pro,btype]);
+		if(Browser.onBDMiniGame){
+			pro.gameurl="";
+		}
+		htt.send(this.ErrorUrlHttps+path,JSON.stringify(pro),"post","text",["Content-Type","application/json"]);
+	}
+
+	__proto.initEvent=function(){
+		this.on(/*laya.events.Event.CLICK*/"click",this,this.onIconClick);
+	}
+
+	__proto.onStageResize=function(){
+		var scale=Math.min(Laya.stage.width / Laya.stage.designWidth,Laya.stage.height / Laya.stage.designHeight);
+		if(Laya.stage.width < 720)
+			scale=0.9;
+		if(this._moreBox){
+			this._moreBox.scale(scale,scale);
+		}
+		if(this._gameBox){
+			this._gameBox.scale(scale,scale);
+		}
+	}
+
+	/**
+	*晃动效果
+	*@param target
+	*@param tTime
+	*@param sacleNum
+	*@param lastSacleNum
+	*@return
+	*/
+	__proto.tada=function(target,tTime,sacleNum,lastSacleNum){
+		(sacleNum===void 0)&& (sacleNum=1.1);
+		(lastSacleNum===void 0)&& (lastSacleNum=1);
+		var tl=new TimeLine();
+		tl.reset();
+		tl.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:3},tTime *0.1)
+		.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:-3},tTime *0.1)
+		.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:3},tTime *0.1)
+		.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:-3},tTime *0.1)
+		.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:3},tTime *0.1)
+		.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:-3},tTime *0.1)
+		.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:3},tTime *0.1)
+		.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:-3},tTime *0.1)
+		.to(target,{scaleX:sacleNum,scaleY:sacleNum,rotation:3},tTime *0.1)
+		.to(target,{scaleX:lastSacleNum,scaleY:lastSacleNum,rotation:0},tTime *0.1);
+		tl.play(0);
+		return tl;
+	}
+
+	/**销毁插件**/
+	__proto.dispose=function(){
+		this.removeEvent();
+		this.gameStopHD=true;
+		MoreGame._moreGameData=null;
+		this._iconImageObj=null;
+		this.clickCallBack=null;
+		this.closeCallBack=null;
+		if(this.iconImgTl){
+			this.iconImgTl.offAll(/*laya.events.Event.COMPLETE*/"complete");
+			this.iconImgTl=null;
+		}
+		if(this._moreBox){
+			this._moreBox.removeChildren();
+			this._moreBox=null;
+		}
+		if(this._gameBox){
+			this._gameBox.removeChildren();
+			this._gameBox=null;
+		}
+		if(this._iconImage){
+			this._iconImage.removeSelf();
+			this._iconImage=null;
+		}
+	}
+
+	/**
+	*设置icon的显示状态
+	*@param type
+	*/
+	__proto.onSetIconType=function(type){
+		this.gameStopHD=!type;
+		this.visible=type;
+	}
+
+	/**检测晃动**/
+	__proto.checkIconImgHD=function(){
+		if(!this.iconImgTl)
+			this.iconImgTl=this.tada(this._iconImage,1200,1.1,0.9);
+		else
+		this.iconImgTl.play(0);
+		this.iconImgTl.on(/*laya.events.Event.COMPLETE*/"complete",this,this.onTlComplete);
+	}
+
+	__proto.onTlComplete=function(){
+		if(this.parent){
+			this._iconImage.scale(0.9,0.9);
+			this._iconImage.rotation=0;
+			if (this.gameStopHD && this.iconImgTl){
+				this.iconImgTl.offAll(/*laya.events.Event.COMPLETE*/"complete");
+				this.iconImgTl=null;
+				return;
+			}
+			Laya.timer.once(1000,this,this.onYanChiPlay);
+			}else{
+			if(this.iconImgTl){
+				this.iconImgTl.offAll();
+				this.iconImgTl=null;
+			}
+		}
+	}
+
+	__proto.onYanChiPlay=function(){
+		if(this.parent && this.iconImgTl){
+			this.iconImgTl.play(0);
+			}else{
+			if(this.iconImgTl){
+				this.iconImgTl.offAll(/*laya.events.Event.COMPLETE*/"complete");
+				this.iconImgTl=null;
+			}
+		}
+	}
+
+	__proto.removeEvent=function(){
+		this.off(/*laya.events.Event.CLICK*/"click",this,this.onIconClick);
+	}
+
+	__proto.onIconClick=function(){
+		this.isShow=true;
+		this.clickCallBack !=null && this.clickCallBack.run();
+		var localCurrentTime=LocalStorage.getItem("currentTime");
+		var currentTime=this.getLocalDateString();
+		if(localCurrentTime !=currentTime){
+			LocalStorage.setItem("currentTime",currentTime);
+			this.reportError(MoreGame._moreGameData.statid1);
+			}else{
+			this.reportError(MoreGame._moreGameData.statid2);
+		}
+		this.onResLoaded();
+	}
+
+	__proto.onResLoaded=function(){
+		if(!this._moreBox){
+			this._moreBox=new Box();
+			Laya.stage.addChild(this._moreBox);
+			this._moreBox.zOrder=99999;
+			this._moreBox.left=this._moreBox.right=this._moreBox.top=this._moreBox.bottom=0;
+			var allBgImg=this.onCreateImage(MoreGame.onGetAtlasDanImgUrl("img_white_bg"),this._moreBox);
+			allBgImg.top=allBgImg.left=allBgImg.right=allBgImg.bottom=0;
+			allBgImg.sizeGrid="1,1,1,1,1";
+			var hlineImg=this.onCreateImage(MoreGame.onGetAtlasDanImgUrl("hengfengexian"),this._moreBox);
+			hlineImg.left=hlineImg.right=0;
+			hlineImg.y=132;
+			hlineImg.alpha=0.2;
+			var jiantouImg=this.onCreateImage(MoreGame.onGetAtlasDanImgUrl("img_font_jingcai"),this._moreBox);
+			jiantouImg.on(/*laya.events.Event.CLICK*/"click",this,this.onJiantouImgClick);
+			if(this.isQMP()&& this.screenType){
+				jiantouImg.pos(15,70);
+				}else{
+				jiantouImg.pos(15,45);
+			};
+			var gamelist=new List();
+			this._moreBox.addChild(gamelist);
+			gamelist.itemRender=GameBox;
+			gamelist.selectEnable=true;
+			gamelist.vScrollBarSkin="";
+			gamelist.scrollBar.autoHide=true;
+			gamelist.scrollBar.elasticDistance=250;
+			gamelist.renderHandler=new Handler(this,this.onGameListRender);
+			var tempGameListArr=MoreGame._moreGameData.marvellousGame.gameList;
+			var gameListArr=[];
+			gameListArr.push(tempGameListArr[0]);
+			gameListArr.push(tempGameListArr[1]);
+			var getRomdomArr=this.RandomNumBoth(gameListArr.length,tempGameListArr.length-gameListArr.length,tempGameListArr.length);
+			if(!getRomdomArr){
+				this.visible=false;
+				return;
+			}
+			try{
+				for(var i=0,sz=getRomdomArr.length;i<sz;i++){
+					var index=getRomdomArr[i];
+					gameListArr.push(tempGameListArr[index]);
+				}
+				MoreGame._moreGameData.marvellousGame.gameList=[];
+				MoreGame._moreGameData.marvellousGame.gameList=gameListArr;
+				gamelist.array=MoreGame._moreGameData.marvellousGame.gameList;
+			}
+			catch(error){
+				gamelist.array=MoreGame._moreGameData.marvellousGame.gameList;
+			}
+			if(this.screenType){
+				gamelist.spaceY=10;
+				gamelist.width=690;
+				if(this.isQMP()){
+					gamelist.height=Laya.stage.height+130;
+					}else{
+					gamelist.height=1139;
+				}
+				gamelist.y=139;
+				gamelist.centerX=0;
+				}else{
+			}
+			this.onStageResize();
+			}else{
+			this._moreBox.visible=true;
+		}
+	}
+
+	/**
+	*取出随机数,maxNum为 取出随机数的个数
+	*@param minNum 最小值 2
+	*@param maxNum 最大数值 14
+	*@param maxcount 最大范围 12
+	*@return
+	*/
+	__proto.RandomNumBoth=function(minNum,maxNum,maxcount){
+		var arr=[];
+		for(var i=minNum;i<maxcount;i++){
+			arr.push(i);
+		};
+		var numArr=[];
+		var arrLength=arr.length;
+		for(i=0;i<arrLength;i++){
+			var Rand=arr.length;
+			var number=Math.floor(Math.random()*arr.length);
+			numArr.push(arr[number]);
+			arr.splice(number,1);
+			if(arr.length <=arrLength-maxNum){
+				return numArr;
+			}
+		}
+		return null;
+	}
+
+	/**
+	*是否是全面屏 包括 安卓跟苹果
+	*@return
+	*/
+	__proto.isQMP=function(){
+		var isBoo=false;
+		var tempBL=0;
+		if(Laya.stage.screenMode==/*laya.display.Stage.SCREEN_HORIZONTAL*/"horizontal"){
+			tempBL=Browser.height%9;
+			}else{
+			tempBL=Browser.width%9;
+		}
+		if(Browser.onAndroid && tempBL==0){
+			var tempBL2=0;
+			if(Laya.stage.screenMode==/*laya.display.Stage.SCREEN_HORIZONTAL*/"horizontal"){
+				tempBL2=Browser.width;
+				}else{
+				tempBL2=Browser.height;
+			}
+			if([2280,2160,2244,3120,2248,2340,2310].indexOf(tempBL2)!=-1){
+				isBoo=true;
+			}
+		};
+		var onIPhoneX=/iPhone/gi.test(Browser.window.navigator.userAgent)&& (Math.min(Browser.clientHeight,Browser.clientWidth)==375 && Math.max(Browser.clientHeight,Browser.clientWidth)==812);
+		var onIPhoneXR=(Math.min(Browser.clientHeight,Browser.clientWidth)==414 && Math.max(Browser.clientHeight,Browser.clientWidth)==896);
+		if((((Browser.onMiniGame || Browser.onBDMiniGame)&& !Browser.onAndroid))&&(onIPhoneX || onIPhoneXR)){
+			isBoo=true;
+		}
+		return isBoo;
+	}
+
+	/**
+	*创建一个圆角矩形
+	*@param width
+	*@param height
+	*@param circleNum
+	*@return
+	*/
+	__proto.onDrawShapes=function(yuanWidth,yuanHeight,circleNum,isTeShu){
+		(circleNum===void 0)&& (circleNum=5);
+		(isTeShu===void 0)&& (isTeShu=false);
+		var isTeShuCircleNum=circleNum;
+		if(isTeShu)
+			isTeShuCircleNum=0;
+		var sprite=new Sprite();
+		sprite.graphics.drawPath(0,0,[
+		["moveTo",circleNum,0],
+		["lineTo",105,0],
+		["arcTo",yuanWidth,0,yuanWidth,circleNum,circleNum],
+		["lineTo",yuanWidth,yuanHeight],
+		["arcTo",yuanWidth,yuanHeight+circleNum,105,yuanHeight+circleNum,isTeShuCircleNum],
+		["lineTo",circleNum,yuanHeight+circleNum],
+		["arcTo",0,yuanHeight+circleNum,0,yuanHeight,isTeShuCircleNum],
+		["lineTo",0,circleNum],
+		["arcTo",0,0,circleNum,0,circleNum],
+		["closePath"]],{
+			fillStyle:"#ff0000"
+		});
+		return sprite;
+	}
+
+	/**
+	*创建遮罩的对象
+	*@param url
+	*@param parent
+	*@return
+	*/
+	__proto.onCreateMaskImg=function(url,parent){
+		var kuangImg=this.onCreateImage(MoreGame.onGetAtlasDanImgUrl("dayuan"),parent);
+		var iconImg=this.onCreateImage(url,kuangImg);
+		iconImg.pos(11,10);
+		var sprite=new Sprite();
+		sprite.graphics.drawCircle(71,74,68,"#ff0000");
+		iconImg.mask=sprite;
+		kuangImg.scale(0.7,0.7);
+		return kuangImg;
+	}
+
+	/**
+	*渲染更多游戏列表
+	*@param item
+	*@param index
+	*/
+	__proto.onGameListRender=function(item,index){
+		var gameList=MoreGame._moreGameData.marvellousGame.gameList;
+		if(index < 0 || index > gameList.length-1)
+			return;
+		var gameObj=gameList[index];
+		item.init(gameObj,this.screenType,new Handler(this,this.onItemClickCallBack));
+	}
+
+	/**
+	*单元点击回调
+	*@param itemData
+	*/
+	__proto.onItemClickCallBack=function(itemData){
+		var _$this=this;
+		if(!/*__JS__ */swan.navigateToMiniProgram)
+			return;
+		var appKey=itemData.appKey;
+		var path=itemData.path;
+		var extendInfo=itemData.extendInfo;
+		/*__JS__ */swan.navigateToMiniProgram({
+			appKey:appKey,
+			path:path,
+			extraData:extendInfo,
+			success:function success (e){
+			},
+			fail:function fail (e){
+			},
+			complete:function complete (e){
+				_$this.reportError(itemData.statid);
+			}.bind(this)
+		});
+	}
+
+	/**更多游戏返回按钮点击**/
+	__proto.onJiantouImgClick=function(type){
+		this.isShow=false;
+		if(this._moreBox){
+			this._moreBox.visible=false;
+		}
+		this.closeCallBack !=null && this.closeCallBack.run();
+	}
+
+	/**
+	*创建文本
+	*@param str
+	*@param parent
+	*@param width
+	*@param height
+	*@param size
+	*@param color
+	*@param wordwarp
+	*@param align
+	*@param leading
+	*@return
+	*/
+	__proto.onCreateLabel=function(str,parent,size,color,wordwarp,align,leading){
+		(size===void 0)&& (size=24);
+		(color===void 0)&& (color="#000000");
+		(wordwarp===void 0)&& (wordwarp=false);
+		(align===void 0)&& (align="center");
+		(leading===void 0)&& (leading=10);
+		var label=new Label();
+		label.text=str;
+		label.font="Microsoft YaHei";
+		label.fontSize=size;
+		label.color=color;
+		label.bold=true;
+		label.leading=leading;
+		label.valign="middle";
+		label.align=align;
+		label.wordWrap=wordwarp;
+		parent.addChild(label);
+		return label;
+	}
+
+	/**
+	*创建图片
+	*@param url
+	*@param parent 图片的父容器
+	*@return
+	*/
+	__proto.onCreateImage=function(url,parent){
+		var image=new Image();
+		image.skin=url;
+		parent.addChild(image);
+		return image;
+	}
+
+	/**初始化判断当前是否显示插件**/
+	__proto.init=function(){
+		var userAgent=Browser.window.navigator.userAgent;
+		var onBDMiniGame=userAgent.indexOf('SwanGame')>-1;
+		this.visible=false;
+		if(onBDMiniGame){
+			this.dinfo=JSON.stringify(/*__JS__ */laya.bd.mini.BMiniAdapter.systemInfo);
+			this.onGetAdvsListData();
+		}
+	}
+
+	/**
+	*生成指定范围的随机数
+	*@param minNum 最小值
+	*@param maxNum 最大值
+	*/
+	__proto.randRange=function(minNum,maxNum){
+		return (Math.floor(Math.random()*(maxNum-minNum+1))+minNum);
+	}
+
+	/**
+	*获取广告列表数据信息
+	*/
+	__proto.onGetAdvsListData=function(){
+		var _this=this;
+		var random=this.randRange(10000,1000000);
+		var url=this._moreGameDataUrl+"?"+random;
+		MoreGame._http.open("get",url,true);
+		MoreGame._http.setRequestHeader("Content-Type","application/x-www-form-urlencoded")
+		MoreGame._http.responseType="text";
+		MoreGame._http.onerror=function (e){
+			_this._onError(e);
+		}
+		MoreGame._http.onload=function (e){
+			_this._onLoad(e);
+		}
+		MoreGame._http.send(null);
+	}
+
+	/**
+	*@private
+	*请求出错侦的听处理函数。
+	*@param e 事件对象。
+	*/
+	__proto._onError=function(e){
+		this.error("Request failed Status:"+MoreGame._http.status+" text:"+MoreGame._http.statusText);
+	}
+
+	/**
+	*@private
+	*请求消息返回的侦听处理函数。
+	*@param e 事件对象。
+	*/
+	__proto._onLoad=function(e){
+		var http=MoreGame._http;
+		var status=http.status!==undefined ? http.status :200;
+		if (status===200 || status===204 || status===0){
+			this.complete();
+			}else {
+			this.error("["+http.status+"]"+http.statusText+":"+http.responseURL);
+		}
+	}
+
+	/**
+	*@private
+	*请求错误的处理函数。
+	*@param message 错误信息。
+	*/
+	__proto.error=function(message){
+		this.event(/*laya.events.Event.ERROR*/"error",message);
+	}
+
+	/**
+	*@private
+	*请求成功完成的处理函数。
+	*/
+	__proto.complete=function(){
+		var flag=true;
+		try {
+			var tempData=MoreGame._http.response || MoreGame._http.responseText;
+			MoreGame._moreGameData=JSON.parse(tempData);
+			this.initUI();
+			}catch (e){
+			flag=false;
+			this.error(e.message);
+		}
+	}
+
+	/**初始化UI显示**/
+	__proto.initUI=function(){
+		if(MoreGame._moreGameData.isOpen && this.screenType){
+			if(!this._iconImage){
+				this._iconImage=new Image();
+				this.addChild(this._iconImage);
+			}
+			this._iconImage.skin=MoreGame.onGetImgSkinUrl(MoreGame._moreGameData.icon);
+			if(this._iconImageObj){
+				this._iconImage.size(this._iconImageObj.width,this._iconImageObj.height);
+				this._iconImage.pivot(this._iconImageObj.width/2,this._iconImageObj.height/2);
+				this._iconImage.pos(this._iconImageObj.width/2,this._iconImageObj.height/2);
+			}
+			this.visible=true;
+			this.initEvent();
+			this.gameStopHD=false;
+			this.checkIconImgHD();
+			}else{
+			this.visible=false;
+		}
+	}
+
+	/**
+	*设置icon的宽高尺寸
+	*@param width
+	*@param height
+	*/
+	__proto.setIconSize=function(w,h){
+		if(this._iconImage){
+			this._iconImage.size(w,h);
+			this._iconImage.pivot(w/2,h/2);
+			this._iconImage.pos(w/2,h/2);
+		}
+		this._iconImageObj={width:w,height:h};
+	}
+
+	MoreGame.toLocaleDateString=function(dateNum){
+		return MoreGame.getDateFormatStr(dateNum,"/");
+	}
+
+	MoreGame.getDateFormatStr=function(stamp,formatStr){
+		(formatStr===void 0)&& (formatStr="yynndd");
+		var date=new Date(stamp);
+		var yy=date.getFullYear();
+		var nn=date.getMonth()+1;
+		var dd=date.getDate();
+		var hh=date.getHours();
+		var mm=date.getMinutes();
+		var ss=date.getSeconds();
+		switch(formatStr){
+			case "yynndd":
+				return yy.toString()+"年"+nn.toString()+"月"+dd.toString()+"日";
+				break ;
+			case "/":
+				return yy.toString()+"/"+nn.toString()+"/"+dd.toString();
+				break ;
+			}
+		return yy.toString()+"年"+nn.toString()+"月"+dd.toString()+"日"+hh.toString()+"时"+mm.toString()+"分"+ss.toString()+"秒";
+	}
+
+	MoreGame.getDay=function(sdate){
+		var month=sdate.getMonth()+1;
+		var day=sdate.getDate();
+		var result=sdate.getFullYear()+""+(month < 10?"0"+month:month)+""+(day < 10?"0"+day:day);
+		return result;
+	}
+
+	MoreGame.onGetAtlasDanImgUrl=function(url){
+		return MoreGame._moreGameData.imgPath+MoreGame._moreGameData.atlas+url+".png";
+	}
+
+	MoreGame.onGetImgSkinUrl=function(resUrl){
+		return MoreGame._moreGameData.imgPath+resUrl;
+	}
+
+	MoreGame.onGetIconImgSkinUrl=function(resUrl){
+		return MoreGame._moreGameData.iconPath+resUrl;
+	}
+
+	MoreGame._moreGameData=null;
+	__static(MoreGame,
+	['_http',function(){return this._http=new Browser.window.XMLHttpRequest();}
+	]);
+	MoreGame.__init$=function(){
+		/**
+		*有渲染游戏单元
+		*@author xiaosong
+		*@date-2019-03-26
+		*/
+		//class GameBox extends laya.ui.Box
+		GameBox=(function(_super){
+			function GameBox(){
+				/**游戏类型**/
+				this.titleLabel=null;
+				/**游戏列表容器**/
+				this.gameListBox=null;
+				GameBox.__super.call(this);
+			}
+			__class(GameBox,'',_super);
+			var __proto=GameBox.prototype;
+			/**
+			*初始化列表数据
+			*@param data
+			*/
+			__proto.init=function(data,screenType,callBack){
+				if(!this.titleLabel){
+					this.titleLabel=this.onCreateLabel(data.title,this,32,"#3d3939");
+					this.titleLabel.pos(8,0);
+					this.titleLabel.size(162,50);
+					}else{
+					this.titleLabel.text=data.title;
+				}
+				if(!this.gameListBox){
+					this.gameListBox=new Box();
+					this.addChild(this.gameListBox);
+					var tempX=0;
+					var tempY=65;
+					var tempWidth=175;
+					for(var i=0,sz=data.gameList.length;i<sz;i++){
+						var gameitem=new GameItem();
+						gameitem.init(data.gameList[i],screenType,callBack);
+						gameitem.x=tempX+i *tempWidth;
+						gameitem.y=tempY;
+						this.gameListBox.addChild(gameitem);
+					}
+					}else{
+					for(i=0,sz=this.gameListBox._childs.length;i<sz;i++){
+						gameitem=this.gameListBox._childs[i];
+						gameitem.init(data.gameList[i],screenType,callBack);
+					}
+				}
+				this.size(695,340);
+				this.cacheAs="bitmap";
+			}
+			/**
+			*创建文本
+			*@param str
+			*@param parent
+			*@param width
+			*@param height
+			*@param size
+			*@param color
+			*@param wordwarp
+			*@return
+			*/
+			__proto.onCreateLabel=function(str,parent,size,color,bold){
+				(size===void 0)&& (size=26);
+				(color===void 0)&& (color="#000000");
+				(bold===void 0)&& (bold=true);
+				var label=new Label();
+				label.text=str;
+				label.font="Microsoft YaHei";
+				label.fontSize=size;
+				label.color=color;
+				label.bold=bold;
+				label.leading=10;
+				label.valign="middle";
+				label.align="center";
+				label.overflow="hidden";
+				parent.addChild(label);
+				return label;
+			}
+			return GameBox;
+		})(Box)
+		/**
+		*更多游戏单元
+		*@author xiaosong
+		*@date 2018-12-26
+		*/
+		//class GameItem extends laya.ui.Box
+		GameItem=(function(_super){
+			function GameItem(){
+				/**icon框**/
+				this.kuangImg=null;
+				/**icon名字**/
+				this.iconNameLabel=null;
+				/**icon图标**/
+				this.iconImg=null;
+				/**玩一玩按钮**/
+				this.playImg=null;
+				/**渲染单元数据**/
+				this.itemData=null;
+				/**回调方法**/
+				this.callBackHandler=null;
+				GameItem.__super.call(this);
+			}
+			__class(GameItem,'',_super);
+			var __proto=GameItem.prototype;
+			__proto.MoveGameItem=function(){}
+			/**注册事件监听**/
+			__proto.initEvent=function(){
+				this.on(/*laya.events.Event.CLICK*/"click",this,this.onItemClick);
+			}
+			__proto.onItemClick=function(){
+				this.callBackHandler !=null && this.callBackHandler.runWith([this.itemData]);
+			}
+			/**
+			*初始化单元数据
+			*@param data
+			*/
+			__proto.init=function(data,screenType,callBack){
+				this.itemData=data;
+				this.callBackHandler=callBack;
+				if(!this.kuangImg)
+					this.kuangImg=this.onCreateImage(MoreGame.onGetAtlasDanImgUrl("dayuan"),this);
+				else{
+					this.kuangImg.skin=MoreGame.onGetAtlasDanImgUrl("dayuan");
+				}
+				if(!this.iconImg){
+					this.iconImg=this.onCreateImage(MoreGame.onGetIconImgSkinUrl(data.icon),this);
+					var sprite=new Sprite();
+					sprite.graphics.drawCircle(71,74,68,"#ff0000");
+					this.iconImg.mask=sprite;
+					this.iconImg.pos(13,10);
+					}else{
+					this.iconImg.skin=MoreGame.onGetIconImgSkinUrl(data.icon);
+				}
+				if(!this.iconNameLabel){
+					this.iconNameLabel=this.onCreateLabel(data.name,this,28,"#3d3939");
+					this.iconNameLabel.pos(7,165);
+					}else{
+					this.iconNameLabel.text=data.name;
+				}
+				if(!this.playImg){
+					this.playImg=this.onCreateImage(MoreGame.onGetAtlasDanImgUrl("img_play"),this);
+					this.playImg.pos(12,210);
+					}else{
+					this.playImg.skin=MoreGame.onGetAtlasDanImgUrl("img_play");
+				}
+				this.size(165,270);
+				this.initEvent();
+			}
+			/**
+			*创建文本
+			*@param str
+			*@param parent
+			*@param width
+			*@param height
+			*@param size
+			*@param color
+			*@param wordwarp
+			*@return
+			*/
+			__proto.onCreateLabel=function(str,parent,size,color,bold){
+				(size===void 0)&& (size=24);
+				(color===void 0)&& (color="#000000");
+				(bold===void 0)&& (bold=false);
+				var label=new Label();
+				label.text=str;
+				label.font="Microsoft YaHei";
+				label.fontSize=size;
+				label.color=color;
+				label.bold=bold;
+				label.leading=10;
+				label.valign="middle";
+				label.align="center";
+				label.size(152,44);
+				label.overflow="hidden";
+				parent.addChild(label);
+				return label;
+			}
+			/**
+			*创建图片
+			*@param url
+			*@param parent 图片的父容器
+			*@return
+			*/
+			__proto.onCreateImage=function(url,parent){
+				var image=new Image();
+				image.skin=url;
+				parent.addChild(image);
+				return image;
+			}
+			return GameItem;
+		})(Box)
+	}
+
+	return MoreGame;
+})(View)
+
+
+/**
 *<code>VBox</code> 是一个垂直布局容器类。
 */
 //class laya.ui.VBox extends laya.ui.LayoutBox
@@ -9745,7 +10883,7 @@ var AsynDialog=(function(_super){
 })(Dialog)
 
 
-	Laya.__init([View]);
+	Laya.__init([View,MoreGame]);
 })(window,document,Laya);
 
 if (typeof define === 'function' && define.amd){
